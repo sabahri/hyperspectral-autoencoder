@@ -16,4 +16,19 @@ import sys
 data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
 ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
 
+# For SalinasA, full data shape is 83 x 86 x 204
+# Spatial grid is 83 x 86 
+# 204-dimensional band vector (basically 204 channels instead of 3)
 print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{data.shape[-1]}')
+
+# Normalizing band values to 1
+band_ind = int(sys.argv[1])
+band = data[:,:,band_ind]
+band_min = band.min()
+band_max = band.max()
+
+band_normalized = (band - band_min)/(band_max - band_min)
+
+# Plotting
+plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
+plt.show()
