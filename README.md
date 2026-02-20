@@ -1,1 +1,1 @@
-Creating an autencoder from scratch hyperspectral remote sensing
+Creating an autencoder from scratch for hyperspectral remote sensing
