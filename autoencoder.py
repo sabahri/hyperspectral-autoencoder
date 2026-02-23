@@ -19,16 +19,26 @@ ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
 # For SalinasA, full data shape is 83 x 86 x 204
 # Spatial grid is 83 x 86 
 # 204-dimensional band vector (basically 204 channels instead of 3)
-print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{data.shape[-1]}')
+num_pixels = data.shape[0] * data.shape[1]
+num_bands = data.shape[-1]
 
-# Normalizing band values to 1
-band_ind = int(sys.argv[1])
-band = data[:,:,band_ind]
-band_min = band.min()
-band_max = band.max()
+print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{num_bands}')
 
-band_normalized = (band - band_min)/(band_max - band_min)
+# # Normalizing band values to 1
+# band_ind = int(sys.argv[1])
+# band = data[:,:,band_ind]
+# band_min = band.min()
+# band_max = band.max()
 
-# Plotting
-plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
-plt.show()
+# band_normalized = (band - band_min)/(band_max - band_min)
+
+# # Plotting
+# plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
+# plt.show()
+
+# Reshape data
+# 83 x 86 = 7138 pixels
+# So we need to break it down to 7138 1x204-dim vectors
+data_reshaped = data.reshape(num_pixels, num_bands)
+
+print(data_reshaped.shape)
