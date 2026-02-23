@@ -47,10 +47,7 @@ data_reshaped = data.reshape(num_pixels, num_bands)
 
 # ReLU
 def relu(x):
-	if x > 0 :
-		return(x)
-	else:
-		return(0)
+	return(np.maximum(x,0))
 
 # Sigmoid
 def sigmoid(x):
@@ -74,24 +71,20 @@ def tanh(x):
 
 def weight_init_He(n,m):
 	# Desired variance in weights for He initialization
-	var = 2 / np.sqrt(n)
-	w = np.random.normal(0,var,size=(m,n))
+	stdev = 2 / np.sqrt(n)
+	w = np.random.normal(0,stdev,size=(m,n))
 	return(w)
 
-
-############################################
-############# Neural Network ###############
-############################################
-
+# Initialization
 w0 = weight_init_He(num_bands,64)
 w1 = weight_init_He(64,16)
 w2 = weight_init_He(16,8)
 
 # Assume initiating bias is 0
-layer1 = w0 @ data_reshaped.transpose()
-layer2 = w1 @ layer1
-layer3 = w2 @ layer2
-
+layer1 = relu(w0 @ data_reshaped.transpose())
+layer2 = relu(w1 @ layer1)
+# Finally, our Bottleneck layer
+layer3 = relu(w2 @ layer2)
 
 
 
