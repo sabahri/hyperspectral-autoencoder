@@ -61,3 +61,45 @@ def sigmoid(x):
 def tanh(x):
 	f = (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 	return(f)
+
+############################################
+############# Defining Layers ##############
+############################################
+
+# Need a gradual reduction in dimensionality
+# e.g. 204 -> 64 -> 16 -> 8
+# He weight initialization: scale by 2/sqrt(# inputs to layer)
+# n: input size
+# m: desired output size
+
+def weight_init_He(n,m):
+	# Desired variance in weights for He initialization
+	var = 2 / np.sqrt(n)
+	w = np.random.normal(0,var,size=(m,n))
+	return(w)
+
+
+############################################
+############# Neural Network ###############
+############################################
+
+w0 = weight_init_He(num_bands,64)
+w1 = weight_init_He(64,16)
+w2 = weight_init_He(16,8)
+
+# Assume initiating bias is 0
+layer1 = w0 @ data_reshaped.transpose()
+layer2 = w1 @ layer1
+layer3 = w2 @ layer2
+
+
+
+
+
+
+
+
+
+
+
+
