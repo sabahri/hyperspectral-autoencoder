@@ -41,4 +41,23 @@ print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{num_bands}')
 # So we need to break it down to 7138 1x204-dim vectors
 data_reshaped = data.reshape(num_pixels, num_bands)
 
-print(data_reshaped.shape)
+###########################################
+########## Activation Functions ###########
+###########################################
+
+# ReLU
+def relu(x):
+	if x > 0 :
+		return(x)
+	else:
+		return(0)
+
+# Sigmoid
+def sigmoid(x):
+	f = 1 / (1 + np.exp(-x))
+	return(f)
+
+# Tanh
+def tanh(x):
+	f = (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
+	return(f)
