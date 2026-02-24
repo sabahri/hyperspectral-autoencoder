@@ -39,7 +39,7 @@ print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{num_bands}')
 # Reshape data
 # 83 x 86 = 7138 pixels
 # So we need to break it down to 7138 1x204-dim vectors
-data_reshaped = data.reshape(num_pixels, num_bands)
+data_reshaped = data.reshape(num_pixels, num_bands).transpose()
 
 ###########################################
 ########## Activation Functions ###########
@@ -75,22 +75,29 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(m,n))
 	return(w)
 
+# Encoder
 # Initialization
 w0 = weight_init_He(num_bands,64)
 w1 = weight_init_He(64,16)
 w2 = weight_init_He(16,8)
 
 # Assume initiating bias is 0
-layer1 = relu(w0 @ data_reshaped.transpose())
+layer1 = relu(w0 @ data_reshaped)
 layer2 = relu(w1 @ layer1)
 # Finally, our Bottleneck layer
 layer3 = relu(w2 @ layer2)
 
+# Decoder
+w3 = weight_init_He(8,16)
+w4 = weight_init_He(16,64)
+w5 = weight_init_He(64,num_bands)
 
+layer4 = relu(w3 @ layer3)
+layer5 = relu(w4 @ layer4)
+# Reconstructed layer
+layer6 = relu(w5 @ layer5)
 
-
-
-
+loss = np.sum((data_reshaped - layer6)**2,axis=0) / num_bands
 
 
 
