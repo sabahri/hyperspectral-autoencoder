@@ -39,7 +39,7 @@ num_bands = data.shape[-1]
 # Reshape data
 # 83 x 86 = 7138 pixels
 # So we need to break it down to 7138 1x204-dim vectors
-data_reshaped = data.reshape(num_pixels, num_bands).transpose()
+data_reshaped = data.reshape(num_pixels, num_bands).T
 
 ###########################################
 ########## Activation Functions ###########
@@ -51,11 +51,7 @@ def relu(x):
 	return(np.maximum(x,0))
 
 def relu_grad(x):
-
-	if relu(x) > 0:
-		return(1)
-	else:
-		return(0)
+	return(x > 0)
 
 # Sigmoid
 def sigmoid(x):
@@ -83,7 +79,7 @@ def mse_cost(x,y,n):
 	return(np.sum((x - y)**2, axis=0) / n)
 
 def mse_der(x,y,n):
-	return(np.sum((x - y), axis = 0) * 2 / n)
+	return((x - y) * 2 / n)
 
 ############################################
 ############# Defining Layers ##############
@@ -123,6 +119,9 @@ layer5 = relu(w4 @ layer4)
 # Reconstructed layer, no activation (linear output)
 layer6 = w5 @ layer5
 
+w_list = [w0, w1, w2, w3, w4, w5]
+layer_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
+
 # Mean squared error to start with
 cost = mse_cost(data_reshaped, layer6, num_bands)
 cost_derivative = mse_der(data_reshaped,layer6, num_bands)
@@ -130,7 +129,16 @@ cost_derivative = mse_der(data_reshaped,layer6, num_bands)
 # Backpropagation
 # Conceptually
 #cost_grad = cost_derivative * w5 * relu_grad(layer5) * w4 * relu_grad(layer4) * w3 * relu_grad(layer3) * w2 * relu_grad(layer2) * w1 * relu_grad(layer1) * w0
-cost_grad = cost_derivative @ w5
+cost_grad = (cost_derivative.T @ w5).T
 
-for i in range(5,1,-1):
+#cost_grad = cost_grad @ w5 @ relu_grad(layer5)
+# Note to self:
+# keep track of what relu_grad argument is supposed to be for correct order of operations
+# for tomorrow troubleshooting
+for i in range(4,-1,-1):
+	print(i)
+	print((relu_grad(layer_list[i]).T @ w_list[i]).shape)
+	#print(w_list[i].T.shape)
+	#cost_grad = relu_grad(layer_list[i]).T @ w_list[i].T @ cost_grad
 
+#print(cost_grad.shape)
