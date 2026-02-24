@@ -43,7 +43,7 @@ data_reshaped = data.reshape(num_pixels, num_bands).transpose()
 
 ###########################################
 ########## Activation Functions ###########
-##########     And Gradients.   ###########
+##########     And Gradients    ###########
 ###########################################
 
 # ReLU
@@ -72,7 +72,7 @@ def tanh(x):
 
 def tanh_grad(x):
 	return((1/np.cosh(x))**2)
-	
+
 ############################################
 ############# Loss Functions ###############
 ############################################
@@ -81,6 +81,9 @@ def tanh_grad(x):
 def mse_cost(x,y,n):
 
 	return(np.sum((x - y)**2, axis=0) / n)
+
+def mse_der(x,y,n):
+	return(np.sum((x - y), axis = 0) * 2 / n)
 
 ############################################
 ############# Defining Layers ##############
@@ -117,11 +120,17 @@ w5 = weight_init_He(64,num_bands)
 
 layer4 = relu(w3 @ layer3)
 layer5 = relu(w4 @ layer4)
-# Reconstructed layer
-layer6 = relu(w5 @ layer5)
+# Reconstructed layer, no activation (linear output)
+layer6 = w5 @ layer5
 
 # Mean squared error to start with
 cost = mse_cost(data_reshaped, layer6, num_bands)
+cost_derivative = mse_der(data_reshaped,layer6, num_bands)
 
+# Backpropagation
+# Conceptually
+#cost_grad = cost_derivative * w5 * relu_grad(layer5) * w4 * relu_grad(layer4) * w3 * relu_grad(layer3) * w2 * relu_grad(layer2) * w1 * relu_grad(layer1) * w0
+cost_grad = cost_derivative @ w5
 
+for i in range(5,1,-1):
 
