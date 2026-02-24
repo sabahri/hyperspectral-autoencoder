@@ -22,7 +22,7 @@ ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
 num_pixels = data.shape[0] * data.shape[1]
 num_bands = data.shape[-1]
 
-print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{num_bands}')
+#print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{num_bands}')
 
 # # Normalizing band values to 1
 # band_ind = int(sys.argv[1])
@@ -43,21 +43,44 @@ data_reshaped = data.reshape(num_pixels, num_bands).transpose()
 
 ###########################################
 ########## Activation Functions ###########
+##########     And Gradients.   ###########
 ###########################################
 
 # ReLU
 def relu(x):
 	return(np.maximum(x,0))
 
+def relu_grad(x):
+
+	if relu(x) > 0:
+		return(1)
+	else:
+		return(0)
+
 # Sigmoid
 def sigmoid(x):
 	f = 1 / (1 + np.exp(-x))
 	return(f)
 
+def sigmoid_grad(x):
+	return(sigmoid(x) * (1 - sigmoid(x)))
+
 # Tanh
 def tanh(x):
 	f = (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 	return(f)
+
+def tanh_grad(x):
+	return((1/np.cosh(x))**2)
+	
+############################################
+############# Loss Functions ###############
+############################################
+
+# Mean Squared Error
+def mse_cost(x,y,n):
+
+	return(np.sum((x - y)**2, axis=0) / n)
 
 ############################################
 ############# Defining Layers ##############
@@ -97,9 +120,8 @@ layer5 = relu(w4 @ layer4)
 # Reconstructed layer
 layer6 = relu(w5 @ layer5)
 
-loss = np.sum((data_reshaped - layer6)**2,axis=0) / num_bands
-
-
+# Mean squared error to start with
+cost = mse_cost(data_reshaped, layer6, num_bands)
 
 
 
