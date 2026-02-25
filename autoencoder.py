@@ -58,16 +58,10 @@ def sigmoid(x):
 	f = 1 / (1 + np.exp(-x))
 	return(f)
 
-def sigmoid_grad(x):
-	return(sigmoid(x) * (1 - sigmoid(x)))
-
 # Tanh
 def tanh(x):
 	f = (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 	return(f)
-
-def tanh_grad(x):
-	return((1/np.cosh(x))**2)
 
 ############################################
 ############# Loss Functions ###############
@@ -127,18 +121,24 @@ cost = mse_cost(data_reshaped, layer6, num_bands)
 cost_derivative = mse_der(data_reshaped,layer6, num_bands)
 
 # Backpropagation
-# Conceptually
-#cost_grad = cost_derivative * w5 * relu_grad(layer5) * w4 * relu_grad(layer4) * w3 * relu_grad(layer3) * w2 * relu_grad(layer2) * w1 * relu_grad(layer1) * w0
-cost_grad = (cost_derivative.T @ w5).T
+cost_grad = cost_derivative
+for i in range(5,-1,-1):
+	cost_grad = w_list[i].T @ cost_grad
+	cost_grad = np.multiply(relu_grad(layer_list[i]),cost_grad)
 
-#cost_grad = cost_grad @ w5 @ relu_grad(layer5)
-# Note to self:
-# keep track of what relu_grad argument is supposed to be for correct order of operations
-# for tomorrow troubleshooting
-for i in range(4,-1,-1):
-	print(i)
-	print((relu_grad(layer_list[i]).T @ w_list[i]).shape)
-	#print(w_list[i].T.shape)
-	#cost_grad = relu_grad(layer_list[i]).T @ w_list[i].T @ cost_grad
 
-#print(cost_grad.shape)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
