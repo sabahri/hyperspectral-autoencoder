@@ -2,7 +2,7 @@
 # https://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes
 # https://medium.com/@dipikadhara06/understanding-hyperspectral-imaging-reading-and-visualizing-data-from-mat-files-using-python-295d5cb83e0a
 # https://researchdatapod.com/building-autoencoders-pytorch-tutorial/
-
+# https://www.freecodecamp.org/news/building-a-neural-network-from-scratch/
 
 import scipy.io
 from scipy.io import loadmat
@@ -73,26 +73,41 @@ def mse_cost(x,y,n):
 	return(np.sum((x - y)**2, axis=0) / n)
 
 def mse_der(x,y,n):
-	return((x - y) * 2 / n)
+	return((x - y) * 2)
 
 ############################################
-############# Defining Layers ##############
+############### Weight Init ################
+########## And Backpropagation #############
 ############################################
-
-# Need a gradual reduction in dimensionality
-# e.g. 204 -> 64 -> 16 -> 8
-# He weight initialization: scale by 2/sqrt(# inputs to layer)
-# n: input size
-# m: desired output size
 
 def weight_init_He(n,m):
-	# Desired variance in weights for He initialization
+	# He weight initialization: scale by 2/sqrt(# inputs to layer)
+	# n: input size
+	# m: desired output size
 	stdev = 2 / np.sqrt(n)
 	w = np.random.normal(0,stdev,size=(m,n))
 	return(w)
 
+def backprop(weights, layers, d_cost):
+	cost_gradient = d_cost
+	for i in range(5, -1, -1):
+		cost_gradient = weights[i].T @ cost_gradient
+		cost_gradient = np.multiply(relu_grad(layers[i]), cost_gradient)
+	return(cost_gradient)
+
+def update_params(weights, biases, gradients, learning_rate):
+	new_w = weights - learning_rate * gradients
+	new_b = biases - learning_rate * biases
+	return(new_w, new_b)
+
+
+############################################
+############## Initialization ##############
+############################################
+
+biases = np.zeros((num_pixels,1))
+
 # Encoder
-# Initialization
 w0 = weight_init_He(num_bands,64)
 w1 = weight_init_He(64,16)
 w2 = weight_init_He(16,8)
@@ -100,7 +115,7 @@ w2 = weight_init_He(16,8)
 # Assume initiating bias is 0
 layer1 = relu(w0 @ data_reshaped)
 layer2 = relu(w1 @ layer1)
-# Finally, our Bottleneck layer
+# Bottleneck layer
 layer3 = relu(w2 @ layer2)
 
 # Decoder
@@ -114,26 +129,15 @@ layer5 = relu(w4 @ layer4)
 layer6 = w5 @ layer5
 
 w_list = [w0, w1, w2, w3, w4, w5]
-layer_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
+l_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
 
 # Mean squared error to start with
 cost = mse_cost(data_reshaped, layer6, num_bands)
 cost_derivative = mse_der(data_reshaped,layer6, num_bands)
 
 # Backpropagation
-cost_grad = cost_derivative
-for i in range(5,-1,-1):
-	cost_grad = w_list[i].T @ cost_grad
-	cost_grad = np.multiply(relu_grad(layer_list[i]),cost_grad)
-
-
-
-
-
-
-
-
-
+cost_grad = backprop(w_list, l_list,cost_derivative)
+weights_update = 
 
 
 
