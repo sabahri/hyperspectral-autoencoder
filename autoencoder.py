@@ -50,7 +50,7 @@ data_reshaped = data.reshape(num_pixels, num_bands).T
 def relu(x):
 	return(np.maximum(x,0))
 
-def relu_grad(x):
+def relu_der(x):
 	return(x > 0)
 
 # Sigmoid
@@ -68,7 +68,7 @@ def tanh(x):
 ############################################
 
 # Mean Squared Error
-def mse_cost(x,y,n):
+def mse(x,y,n):
 
 	return(np.sum((x - y)**2, axis=0) / n)
 
@@ -84,21 +84,20 @@ def weight_init_He(n,m):
 	# He weight initialization: scale by 2/sqrt(# inputs to layer)
 	# n: input size
 	# m: desired output size
+
 	stdev = 2 / np.sqrt(n)
 	w = np.random.normal(0,stdev,size=(m,n))
-	return(w)
 
-def b_init(layer):
-	b = np.zeros((layer.shape[0],1))
-	return(b)
+	return(w)
 
 def backprop(weights, layers, d_J):
 
 	num_hidden_layers = len(weights) - 1 
 	d_z = d_J
 	for i in range(num_hidden_layers , -1, -1):
-		d_z = weights[i].T @ d_J
-		d_z = np.multiply(relu_grad(layers[i]), d_J)
+
+		d_z = weights.T @ d_J
+		d_z = np.multiply(relu_der(layers[i]), d_J)
 
 	return(d_z)
 
@@ -130,7 +129,7 @@ b0 = np.zeros((64,1))
 w1 = weight_init_He(64,16)
 b1 = np.zeros((16,1))
 w2 = weight_init_He(16,8)
-b2 = np.zeros(8,1)
+b2 = np.zeros((8,1))
 
 # Assume initiating bias is 0
 layer1 = relu(w0 @ data_reshaped)
@@ -151,18 +150,19 @@ layer5 = relu(w4 @ layer4)
 # Reconstructed layer, no activation (linear output)
 layer6 = w5 @ layer5
 
+# Mean squared error to start with
+d_cost = mse_der(data_reshaped,layer6, num_bands)
+
 w_list = [w0, w1, w2, w3, w4, w5]
 b_list = [b0, b1, b2, b3, b4, b5]
 l_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
 
-# Mean squared error to start with
-# 7 layers total
-#cost = mse_cost(data_reshaped, layer6, num_bands) / 7
-#cost_derivative = mse_der(data_reshaped,layer6, num_bands)
+############################################
+############# Parameter Updates ############
+############################################
 
-# Backpropagation and weith/bias updates
-#bprop = backprop(w_array,l_array,cost_derivative)
-#grad_W, grad_b = gradients(l_array, bprop)
+# Learning rate
+lr = 0.1
 
-
-
+for i in range(len(w_list)):
+	w_list[i], b_list[i] = update_params(w_list[i], b_list[i], l_list[i], d_cost, lr)
