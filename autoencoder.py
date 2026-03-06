@@ -73,7 +73,7 @@ def mse_cost(x,y,n):
 	return(np.sum((x - y)**2, axis=0) / n)
 
 def mse_der(x,y,n):
-	return((x - y) * 2)
+	return(-2*(x - y))
 
 ############################################
 ############### Weight Init ################
@@ -88,18 +88,35 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(m,n))
 	return(w)
 
-def backprop(weights, layers, d_cost):
-	cost_gradient = d_cost
-	for i in range(5, -1, -1):
-		cost_gradient = weights[i].T @ cost_gradient
-		cost_gradient = np.multiply(relu_grad(layers[i]), cost_gradient)
-	return(cost_gradient)
+def b_init(layer):
+	b = np.zeros((layer.shape[0],1))
+	return(b)
 
-def update_params(weights, biases, gradients, learning_rate):
-	new_w = weights - learning_rate * gradients
-	new_b = biases - learning_rate * biases
+def backprop(weights, layers, d_J):
+
+	num_hidden_layers = len(weights) - 1 
+	d_z = d_J
+	for i in range(num_hidden_layers , -1, -1):
+		d_z = weights[i].T @ d_J
+		d_z = np.multiply(relu_grad(layers[i]), d_J)
+
+	return(d_z)
+
+def gradients(weights, layers, d_J):
+
+	d_z = backprop(weights, layers, d_J)
+	dW = d_z @ layers.T 
+	db = d_z
+
+	return(dW, db)
+
+def update_params(W, b, layers, d_J, learning_rate):
+
+	dW,db = gradients(layers, layers, d_J)
+	new_W = W - learning_rate * dW
+	new_b = b - learning_rate * db
+
 	return(new_w, new_b)
-
 
 ############################################
 ############## Initialization ##############
@@ -109,8 +126,11 @@ biases = np.zeros((num_pixels,1))
 
 # Encoder
 w0 = weight_init_He(num_bands,64)
+b0 = np.zeros((64,1))
 w1 = weight_init_He(64,16)
+b1 = np.zeros((16,1))
 w2 = weight_init_He(16,8)
+b2 = np.zeros(8,1)
 
 # Assume initiating bias is 0
 layer1 = relu(w0 @ data_reshaped)
@@ -120,8 +140,11 @@ layer3 = relu(w2 @ layer2)
 
 # Decoder
 w3 = weight_init_He(8,16)
+b3 = np.zeros((16,1))
 w4 = weight_init_He(16,64)
+b4 = np.zeros((64,1))
 w5 = weight_init_He(64,num_bands)
+b5 = np.zeros((num_bands, 1))
 
 layer4 = relu(w3 @ layer3)
 layer5 = relu(w4 @ layer4)
@@ -129,20 +152,17 @@ layer5 = relu(w4 @ layer4)
 layer6 = w5 @ layer5
 
 w_list = [w0, w1, w2, w3, w4, w5]
+b_list = [b0, b1, b2, b3, b4, b5]
 l_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
 
 # Mean squared error to start with
-cost = mse_cost(data_reshaped, layer6, num_bands)
-cost_derivative = mse_der(data_reshaped,layer6, num_bands)
+# 7 layers total
+#cost = mse_cost(data_reshaped, layer6, num_bands) / 7
+#cost_derivative = mse_der(data_reshaped,layer6, num_bands)
 
-# Backpropagation
-cost_grad = backprop(w_list, l_list,cost_derivative)
-weights_update = 
-
-
-
-
-
+# Backpropagation and weith/bias updates
+#bprop = backprop(w_array,l_array,cost_derivative)
+#grad_W, grad_b = gradients(l_array, bprop)
 
 
 
