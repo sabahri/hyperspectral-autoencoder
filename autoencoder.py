@@ -89,30 +89,30 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(n,m))
 	return(w)
 
-# W is my list of weights
-# W[i] is the weight matrix applied to the ith layer
-def backprop(W, layer, d_J, num_hidden_layers):
+def backprop(W, layer, d_J, num_hidden_layers, layer_ind):
+	# W : list of weights
+	# W[i] : weight matrix applied to the ith layer
+	# layer_ind : layer we are backpropagating to
 
-	d_z = d_J.T
-	for i in range(len(W)-1, -1, -1):
-		d_z = W[i].T @ d_z
+	dz = d_J										# starts at dz_6
+	dq = W[-1].T @ d_z								# dq_5
+	for i in range(len(W) - 1, layer_ind,-1):
+		dz = np.multiply(dq, relu_der(layer[i]))	# dz_5
+		dq = W[i].T @ d_z							# dq_4
 
-		# need to fix indices for layers and weights
-		d_z = np.multiply(relu_der(layer[i].T), d_z)
+	return(dz, dq)
 
-	return(d_z)
+def gradient(W, layer, d_J, num_hidden_layers, layer_ind):
 
-def gradients(W, layer, num_hidden_layers, d_J):
-
-	d_z = backprop(W, layer, d_J, num_hidden_layers)
-	dW = d_z @ layer.T 
+	d_z = backprop(W, layer, d_J, num_hidden_layers, layer_ind)
+	dW = d_z @ layer[layer_ind - 1].T 
 	db = d_z
 
 	return(dW, db)
 
-def update_params(W, b, layer, num_hidden_layers, d_J, learning_rate):
+def update_params(W, b, layer, num_hidden_layers, layer_ind, d_J, learning_rate):
 
-	dW,db = gradients(W, layer, num_hidden_layers, d_J)
+	dW,db = gradient(W, layer, d_J, num_hidden_layers, layer_ind)
 	new_W = W - learning_rate * dW
 	new_b = b - learning_rate * db
 
@@ -125,37 +125,37 @@ def update_params(W, b, layer, num_hidden_layers, d_J, learning_rate):
 biases = np.zeros((num_pixels,1))
 
 # Encoder
-w0 = weight_init_He(num_bands,64)
-b0 = 0
-w1 = weight_init_He(64,16)
+w1 = weight_init_He(num_bands,64)
 b1 = 0
-w2 = weight_init_He(16,8)
+w2 = weight_init_He(64,16)
 b2 = 0
+w3 = weight_init_He(16,8)
+b3 = 0
 
 # Assume initiating bias is 0
-layer1 = relu(data_reshaped @ w0 + b0)
-layer2 = relu(layer1 @ w1 + b1)
+layer1 = relu(data_reshaped @ w1 + b1)
+layer2 = relu(layer1 @ w2 + b2)
 # Bottleneck layer
-layer3 = relu(layer2 @ w2 + b2)
+layer3 = relu(layer2 @ w3 + b3)
 
 # Decoder
-w3 = weight_init_He(8,16)
-b3 = 0
-w4 = weight_init_He(16,64)
+w4 = weight_init_He(8,16)
 b4 = 0
-w5 = weight_init_He(64,num_bands)
+w5 = weight_init_He(16,64)
 b5 = 0
+w6 = weight_init_He(64,num_bands)
+b6 = 0
 
-layer4 = relu(layer3 @ w3 + b3)
-layer5 = relu(layer4 @ w4 + b4)
+layer4 = relu(layer3 @ w4 + b4)
+layer5 = relu(layer4 @ w5 + b5)
 # Reconstructed layer, no activation (linear output)
-layer6 = layer5 @ w5 + b5
+layer6 = layer5 @ w6 + b6
 
 # Mean squared error to start with
 d_cost = mse_der(data_reshaped,layer6, num_bands)
 
-w_list = [w0, w1, w2, w3, w4, w5]
-b_list = [b0, b1, b2, b3, b4, b5]
+w_list = [w1, w2, w3, w4, w5, w6]
+b_list = [b1, b2, b3, b4, b5, b6]
 l_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
 
 ############################################
@@ -167,6 +167,6 @@ lr = 0.1
 # Number of hidden layers
 nhr = len(w_list) - 1
 
-grad5 = d_cost @ w5.T
+
 
 w_list, b_list = update_params(w_list, b_list, l_list, nhr, grad5, lr)
