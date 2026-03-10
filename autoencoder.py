@@ -134,11 +134,21 @@ b3 = 0
 
 # Perform Per-Band Normalization to avoid exploding gradients
 
-data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
-for j in range(data.shape[-1]):
-	data_normalized[j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
+## min-max scaling
+# data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+# for j in range(data.shape[-1]):
+# 	data_normalized[:,:,j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
 
-data_reshaped = data_normalized.reshape(num_pixels, num_bands)
+# z-scoring
+
+data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+
+for j in range(data.shape[-1]):
+	mean = np.mean(data[:,:,j])
+	std = np.std(data[:,:,j])
+	data_z[:,:,j] = (data[:,:,j] - mean) / (std + 10**-6)		# add infinitesimal epsilon in case std = 0
+
+data_reshaped = data_z.reshape(num_pixels, num_bands)
 
 # Assume initiating bias is 0
 layer1 = relu(data_reshaped @ w1 + b1)
