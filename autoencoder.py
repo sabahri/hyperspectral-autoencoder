@@ -24,13 +24,13 @@ num_bands = data.shape[-1]
 
 #print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{num_bands}')
 
-# # Normalizing band values to 1
-# band_ind = int(sys.argv[1])
-# band = data[:,:,band_ind]
-# band_min = band.min()
-# band_max = band.max()
+## Normalizing band values to 1
+#band_ind = int(sys.argv[1])
+#band = data[:,:,band_ind]
+#band_min = band.min()
+#band_max = band.max()
 
-# band_normalized = (band - band_min)/(band_max - band_min)
+#band_normalized = (band - band_min)/(band_max - band_min)
 
 # # Plotting
 # plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
@@ -39,7 +39,7 @@ num_bands = data.shape[-1]
 # Reshape data
 # 83 x 86 = 7138 pixels
 # So we need to break it down to 7138 1x204-dim vectors
-data_reshaped = data.reshape(num_pixels, num_bands)
+#data_reshaped = data.reshape(num_pixels, num_bands)
 
 ###########################################
 ########## Activation Functions ###########
@@ -89,7 +89,7 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(n,m))
 	return(w)
 
-def update_params(W, b, layer, d_J, num_hidden_layers):
+def update_params(W, b, layer, d_J):
 	# W : list of weights
 	# W[i] : weight matrix applied to the ith layer
 	# b : list of biases
@@ -101,7 +101,7 @@ def update_params(W, b, layer, d_J, num_hidden_layers):
 	dz = d_J												# starts at dz_6
 	dq = W[-1].T @ dz										# dq_5
 
-	W[-1] = W[-1] - learning_rate * dz @ layer[-1].T
+	W[-1] = W[-1] - learning_rate * dz @ layer[-2].T  		# note W[-1] = W[5] = w6 here
 	b[-1] = b[-1] - learning_rate * dz
 
 	for i in range(len(W) - 1, 0,-1):						# Iterating from i = 5 to 1
@@ -109,7 +109,7 @@ def update_params(W, b, layer, d_J, num_hidden_layers):
 		dq = W[i].T @ dz									# dq_4
 
 		# Calculating gradients for weights / biases per layer
-		dW = dz @ layer[i].T 
+		dW = dz @ layer[i-1].T 
 		db = dz
 
 		# Updating parameters, layer by layer
@@ -131,6 +131,14 @@ w2 = weight_init_He(64,16)
 b2 = 0
 w3 = weight_init_He(16,8)
 b3 = 0
+
+# Perform Per-Band Normalization to avoid exploding gradients
+
+data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+for j in range(data.shape[-1]):
+	data_normalized[j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
+
+data_reshaped = data_normalized.reshape(num_pixels, num_bands)
 
 # Assume initiating bias is 0
 layer1 = relu(data_reshaped @ w1 + b1)
@@ -159,11 +167,13 @@ b_list = [b1, b2, b3, b4, b5, b6]
 l_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
 
 ############################################
-############# Parameter Updates ############
+############# Gradient Descent #############
 ############################################
 
 # Learning rate
 lr = 0.1
-# Number of hidden layers
-nhr = len(w_list) - 1
 
+iteration = 1
+#while mse(layer6, data_reshaped) >= :
+#	iteration += 1
+#	update_params(w_list, b_list, l_list, d_cost)
