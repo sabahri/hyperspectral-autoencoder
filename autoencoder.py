@@ -89,34 +89,34 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(n,m))
 	return(w)
 
-def backprop(W, layer, d_J, num_hidden_layers, layer_ind):
+def update_params(W, b, layer, d_J, num_hidden_layers):
 	# W : list of weights
 	# W[i] : weight matrix applied to the ith layer
+	# b : list of biases
+	# layer: list of layers
+	# d_J : derivative of cost function
 	# layer_ind : layer we are backpropagating to
 
-	dz = d_J										# starts at dz_6
-	dq = W[-1].T @ d_z								# dq_5
-	for i in range(len(W) - 1, layer_ind,-1):
-		dz = np.multiply(dq, relu_der(layer[i]))	# dz_5
-		dq = W[i].T @ d_z							# dq_4
+	# Recursively backpropagating with dz and dq base case
+	dz = d_J												# starts at dz_6
+	dq = W[-1].T @ dz										# dq_5
 
-	return(dz, dq)
+	W[-1] = W[-1] - learning_rate * dz @ layer[-1].T
+	b[-1] = b[-1] - learning_rate * dz
 
-def gradient(W, layer, d_J, num_hidden_layers, layer_ind):
+	for i in range(len(W) - 1, 0,-1):						# Iterating from i = 5 to 1
+		dz = np.multiply(dq, relu_der(layer[i]))			# dz_5
+		dq = W[i].T @ dz									# dq_4
 
-	d_z = backprop(W, layer, d_J, num_hidden_layers, layer_ind)
-	dW = d_z @ layer[layer_ind - 1].T 
-	db = d_z
+		# Calculating gradients for weights / biases per layer
+		dW = dz @ layer[i].T 
+		db = dz
 
-	return(dW, db)
-
-def update_params(W, b, layer, num_hidden_layers, layer_ind, d_J, learning_rate):
-
-	dW,db = gradient(W, layer, d_J, num_hidden_layers, layer_ind)
-	new_W = W - learning_rate * dW
-	new_b = b - learning_rate * db
-
-	return(new_W, new_b)
+		# Updating parameters, layer by layer
+		W[i] = W[i] - learning_rate * dW
+		b[i] = b[i] - learning_rate * db
+	
+	return(W, b)
 
 ############################################
 ############## Initialization ##############
@@ -167,6 +167,3 @@ lr = 0.1
 # Number of hidden layers
 nhr = len(w_list) - 1
 
-
-
-w_list, b_list = update_params(w_list, b_list, l_list, nhr, grad5, lr)
