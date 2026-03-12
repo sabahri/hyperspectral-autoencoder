@@ -138,6 +138,8 @@ for i in range(num_bands):
 # 	data_normalized[:,:,j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
 
 # z-scoring
+# Input data is normalized so that the pixels of each band are centered on 0, with stdev = 1
+# As a result, a useless network will produce MSE loss ~ 1
 
 data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
 epsilon = 10**-6
@@ -149,14 +151,13 @@ for j in range(data.shape[-1]):
 
 data_z_reshaped = data_z.reshape(num_pixels, num_bands)
 
-
 ############################################
 ############## Initialization ##############
 ############################################
 
 biases = np.zeros((num_pixels,1))
 
-# Encoder
+# Encoder inits
 w1 = weight_init_He(num_bands,64)
 b1 = 0
 w2 = weight_init_He(64,16)
@@ -164,13 +165,7 @@ b2 = 0
 w3 = weight_init_He(16,8)
 b3 = 0
 
-# Assume initiating bias is 0
-layer1 = relu(data_z_reshaped @ w1 + b1)
-layer2 = relu(layer1 @ w2 + b2)
-# Bottleneck layer
-layer3 = relu(layer2 @ w3 + b3)
-
-# Decoder
+# Decoder inits
 w4 = weight_init_He(8,16)
 b4 = 0
 w5 = weight_init_He(16,64)
@@ -178,13 +173,20 @@ b5 = 0
 w6 = weight_init_He(64,num_bands)
 b6 = 0
 
+
+# Assume initiating bias is 0
+layer1 = relu(data_z_reshaped @ w1 + b1)
+layer2 = relu(layer1 @ w2 + b2)
+# Bottleneck layer
+layer3 = relu(layer2 @ w3 + b3)
+
 layer4 = relu(layer3 @ w4 + b4)
 layer5 = relu(layer4 @ w5 + b5)
 # Reconstructed layer, no activation (linear output)
 layer6 = layer5 @ w6 + b6
 
 # Mean squared error to start with
-d_cost = mse_der(data_reshaped,layer6, num_bands)
+d_cost = mse_der(data_z_reshaped,layer6, num_bands)
 
 w_list = [w1, w2, w3, w4, w5, w6]
 b_list = [b1, b2, b3, b4, b5, b6]
@@ -192,12 +194,31 @@ l_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
 
 ############################################
 ############# Gradient Descent #############
+#############   (Coarse) for   #############
+############# Learning Rate Opt ############
 ############################################
 
 # Learning rate
-lr = 0.1
+e = np.array((-5, -4, -3, -2, -1))
+lr = 10.**e
+num_rates = lr.shape[0]
+num_epochs = 20
+cost = np.zeros((num_rates, num_epochs))
 
-iteration = 1
-#while mse(layer6, data_reshaped) >= :
-#	iteration += 1
-#	update_params(w_list, b_list, l_list, d_cost)
+for i in lr:
+	for j in range(num_epochs):
+		cost[i,j] = mse(data_z_reshaped,layer6, num_bands)
+		w_list = update_params()
+		b_list= update_params()
+	
+colors = cm.rainbow(np.linspace(0,1,num_rates))
+fig, ax = plt.subplots()
+
+for i in range(num_rates):
+	ax.plot(num_epochs, cost[i,:])
+
+ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
+ax.grid()
+plt.show()
+
+
