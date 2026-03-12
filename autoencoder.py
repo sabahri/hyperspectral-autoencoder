@@ -63,12 +63,12 @@ def tanh(x):
 ############################################
 
 # Mean Squared Error
-def mse(x,y,n):
+def mse_cost(x,y,n):
+	loss = (y - x)**2
+	return(np.sum(loss) / n)
 
-	return(np.sum((x - y)**2, axis=0) / n)
-
-def mse_der(x,y,n):
-	return(-2*(x - y))
+def mse_der(x,y):
+	return(-2*(y - x))
 
 ############################################
 ############### Weight Init ################
@@ -84,10 +84,11 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(n,m))
 	return(w)
 
-def forward_pass(W,b,input,channels):
+def forward_pass(W,b,data_array, channels):
+	num_examples = data_array.shape[1]
 	
 	# Encoder
-	layer1 = relu(input @ W[0] + b[0])
+	layer1 = relu(data_array @ W[0] + b[0])
 	layer2 = relu(layer1 @ W[1] + b[1])
 	# Bottleneck layer
 	layer3 = relu(layer2 @ W[2] + b[2])
@@ -100,13 +101,15 @@ def forward_pass(W,b,input,channels):
 	layer6 = layer5 @ W[5] + b[5]
 
 	# List of layers
-	layer_list = [input, layer1, layer2, layer3, layer4, layer5, layer6]
+	layer_list = [data_array, layer1, layer2, layer3, layer4, layer5, layer6]
 
-	cost = mse(input, layer6, channels)
+	# Cost function
+	J = mse_cost(data_array, layer6, num_examples)
 
-	return(layer6, layer_list, cost)
+	#print(J.shape)
+	return(layer6, layer_list, J)
 
-def update_params(W, b, layer, d_J):
+def update_params(W, b, layer, learning_rate, d_J):
 	# W : list of weights
 	# W[i] : weight matrix applied to the ith layer
 	# b : list of biases
@@ -116,17 +119,20 @@ def update_params(W, b, layer, d_J):
 
 	# Recursively backpropagating with dz and dq base case
 	dz = d_J												# starts at dz_6
-	dq = W[-1].T @ dz										# dq_5
+	dq = dz @ W[-1].T										# dq_5
 
-	W[-1] = W[-1] - learning_rate * dz @ layer[-2].T  		# note W[-1] = W[5] = w6 here
+	W[-1] = W[-1] - learning_rate * layer[-2].T @ dz 		# note W[-1] = W[5] = w6 here
 	b[-1] = b[-1] - learning_rate * dz
 
-	for i in range(len(W) - 1, 0,-1):						# Iterating from i = 5 to 1
+	for i in range(len(W) - 1, 0,-1):
+		print("weight", W[i].T.shape)							# Iterating from i = 5 to 1
+		print("layer", layer[i].shape)
 		dz = np.multiply(dq, relu_der(layer[i]))			# dz_5
-		dq = W[i].T @ dz									# dq_4
+		print("dz", dz.shape)
+		dq = dz @ W[i].T									# dq_4
 
 		# Calculating gradients for weights / biases per layer
-		dW = dz @ layer[i-1].T 
+		dW = layer[i-1].T @ dz 
 		db = dz
 
 		# Updating parameters, layer by layer
@@ -195,12 +201,13 @@ b5 = 0
 w6 = weight_init_He(64,num_bands)
 b6 = 0
 
-# Mean squared error to start with
-d_cost = mse_der(data_z_reshaped,layer6, num_bands)
-
 w_list = [w1, w2, w3, w4, w5, w6]
 b_list = [b1, b2, b3, b4, b5, b6]
 l_list = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[1]
+
+# Mean squared error to start with
+output = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[0]
+d_cost = mse_der(data_z_reshaped,output)
 
 ############################################
 ############# Gradient Descent #############
@@ -214,12 +221,16 @@ lr = 10.**e
 num_rates = lr.shape[0]
 num_epochs = 20
 cost = np.zeros((num_rates, num_epochs))
+epoch = 1
 
-for i in lr:
+for i in range(num_rates):
 	for j in range(num_epochs):
-		cost[i,j] = mse(data_z_reshaped,layer6, num_bands)
-		w_list = update_params()
-		b_list= update_params()
+		print("Epoch:", epoch)
+		output = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[0]
+		cost[i,j] = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[2]	
+		d_cost = mse_der(data_z_reshaped, output)
+		w_list, b_list = update_params(w_list, b_list, l_list, lr[i], d_cost)
+		epoch += 1
 	
 colors = cm.rainbow(np.linspace(0,1,num_rates))
 fig, ax = plt.subplots()
