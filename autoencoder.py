@@ -84,6 +84,28 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(n,m))
 	return(w)
 
+def forward_pass(W,b,input,channels):
+	
+	# Encoder
+	layer1 = relu(input @ W[0] + b[0])
+	layer2 = relu(layer1 @ W[1] + b[1])
+	# Bottleneck layer
+	layer3 = relu(layer2 @ W[2] + b[2])
+
+	# Decoder
+	layer4 = relu(layer3 @ W[3] + b[3])
+	layer5 = relu(layer4 @ W[4] + b[4])
+
+	# Reconstructed layer, no activation (linear output)
+	layer6 = layer5 @ W[5] + b[5]
+
+	# List of layers
+	layer_list = [input, layer1, layer2, layer3, layer4, layer5, layer6]
+
+	cost = mse(input, layer6, channels)
+
+	return(layer6, layer_list, cost)
+
 def update_params(W, b, layer, d_J):
 	# W : list of weights
 	# W[i] : weight matrix applied to the ith layer
@@ -173,24 +195,12 @@ b5 = 0
 w6 = weight_init_He(64,num_bands)
 b6 = 0
 
-
-# Assume initiating bias is 0
-layer1 = relu(data_z_reshaped @ w1 + b1)
-layer2 = relu(layer1 @ w2 + b2)
-# Bottleneck layer
-layer3 = relu(layer2 @ w3 + b3)
-
-layer4 = relu(layer3 @ w4 + b4)
-layer5 = relu(layer4 @ w5 + b5)
-# Reconstructed layer, no activation (linear output)
-layer6 = layer5 @ w6 + b6
-
 # Mean squared error to start with
 d_cost = mse_der(data_z_reshaped,layer6, num_bands)
 
 w_list = [w1, w2, w3, w4, w5, w6]
 b_list = [b1, b2, b3, b4, b5, b6]
-l_list = [data_reshaped, layer1, layer2, layer3, layer4, layer5, layer6]
+l_list = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[1]
 
 ############################################
 ############# Gradient Descent #############
