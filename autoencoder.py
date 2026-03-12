@@ -36,11 +36,6 @@ num_bands = data.shape[-1]
 # plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
 # plt.show()
 
-# Reshape data
-# 83 x 86 = 7138 pixels
-# So we need to break it down to 7138 1x204-dim vectors
-#data_reshaped = data.reshape(num_pixels, num_bands)
-
 ###########################################
 ########## Activation Functions ###########
 ##########     And Gradients    ###########
@@ -119,6 +114,43 @@ def update_params(W, b, layer, d_J):
 	return(W, b)
 
 ############################################
+########### Data Normalization #############
+############################################
+
+# Reshape data
+# 83 x 86 = 7138 pixels
+# So we need to break it down to 7138 1x204-dim vectors
+data_reshaped = data.reshape(num_pixels, num_bands)
+
+# Perform Per-Band Normalization to avoid exploding gradients
+# Per band standard deviations shows that the standard deviations vary widely, indicating that
+# Min-Max normaization would skew the MSE loss towards bands with high variance. Note: each 
+# band is unlikely to be uniformly distributed
+
+devs = np.zeros((num_bands))
+
+for i in range(num_bands):
+	devs[i] = np.std(data_reshaped[:,i])
+
+## min-max scaling
+# data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+# for j in range(data.shape[-1]):
+# 	data_normalized[:,:,j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
+
+# z-scoring
+
+data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+epsilon = 10**-6
+
+for j in range(data.shape[-1]):
+	mean = np.mean(data[:,:,j])
+	std = np.std(data[:,:,j])
+	data_z[:,:,j] = (data[:,:,j] - mean) / (std + epsilon)		# add infinitesimal epsilon in case std = 0
+
+data_z_reshaped = data_z.reshape(num_pixels, num_bands)
+
+
+############################################
 ############## Initialization ##############
 ############################################
 
@@ -132,26 +164,8 @@ b2 = 0
 w3 = weight_init_He(16,8)
 b3 = 0
 
-# Perform Per-Band Normalization to avoid exploding gradients
-
-## min-max scaling
-# data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
-# for j in range(data.shape[-1]):
-# 	data_normalized[:,:,j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
-
-# z-scoring
-
-data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
-
-for j in range(data.shape[-1]):
-	mean = np.mean(data[:,:,j])
-	std = np.std(data[:,:,j])
-	data_z[:,:,j] = (data[:,:,j] - mean) / (std + 10**-6)		# add infinitesimal epsilon in case std = 0
-
-data_reshaped = data_z.reshape(num_pixels, num_bands)
-
 # Assume initiating bias is 0
-layer1 = relu(data_reshaped @ w1 + b1)
+layer1 = relu(data_z_reshaped @ w1 + b1)
 layer2 = relu(layer1 @ w2 + b2)
 # Bottleneck layer
 layer3 = relu(layer2 @ w3 + b3)
