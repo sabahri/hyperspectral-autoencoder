@@ -8,6 +8,7 @@ import scipy.io
 from scipy.io import loadmat
 import torch
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 import sys
 
@@ -116,29 +117,33 @@ def update_params(W, b, layer, learning_rate, d_J):
 	# layer: list of layers
 	# d_J : derivative of cost function
 	# layer_ind : layer we are backpropagating to
+	# z : layer before activation
+	# q: layer after activation
 
 	# Recursively backpropagating with dz and dq base case
-	dz = d_J												# starts at dz_6
-	dq = dz @ W[-1].T										# dq_5
+
+	dz = d_J												# 7138 x 204
+	dq = dz @ W[-1].T										# dq_5, 7138 x 64
 
 	W[-1] = W[-1] - learning_rate * layer[-2].T @ dz 		# note W[-1] = W[5] = w6 here
 	b[-1] = b[-1] - learning_rate * dz
 
-	for i in range(len(W) - 1, 0,-1):
-		print("weight", W[i].T.shape)							# Iterating from i = 5 to 1
-		print("layer", layer[i].shape)
-		dz = np.multiply(dq, relu_der(layer[i]))			# dz_5
-		print("dz", dz.shape)
-		dq = dz @ W[i].T									# dq_4
 
-		# Calculating gradients for weights / biases per layer
-		dW = layer[i-1].T @ dz 
+	# Iterating from 4 to 0
+	for i in range(len(W) - 2, 0,-1):						# want start with w5 update, so W[4]
+		dz = np.multiply(dq, relu_der(layer[i+1]))			# Layer 5, 7138 x 64		
+
+		# Calculating gradients
+		dW = layer[i].T @ dz 								# dW should have dimensions 16 x 64
 		db = dz
 
-		# Updating parameters, layer by layer
-		W[i] = W[i] - learning_rate * dW
+		# Updating parameters
+		W[i] = W[i] - learning_rate * dW					# W[4] = w5, should be 16 x 64
 		b[i] = b[i] - learning_rate * db
-	
+		
+		# For the next iteration
+		dq = dz @ W[i].T  									# dq_4, 7138 x 16
+
 	return(W, b)
 
 ############################################
@@ -220,12 +225,12 @@ e = np.array((-5, -4, -3, -2, -1))
 lr = 10.**e
 num_rates = lr.shape[0]
 num_epochs = 20
+epochs = np.linspace(1,20,20)
 cost = np.zeros((num_rates, num_epochs))
 epoch = 1
 
 for i in range(num_rates):
 	for j in range(num_epochs):
-		print("Epoch:", epoch)
 		output = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[0]
 		cost[i,j] = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[2]	
 		d_cost = mse_der(data_z_reshaped, output)
@@ -236,7 +241,7 @@ colors = cm.rainbow(np.linspace(0,1,num_rates))
 fig, ax = plt.subplots()
 
 for i in range(num_rates):
-	ax.plot(num_epochs, cost[i,:])
+	ax.plot(epochs, cost[i,:])
 
 ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
 ax.grid()
