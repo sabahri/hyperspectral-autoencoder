@@ -199,71 +199,122 @@ for j in range(data.shape[-1]):
 
 data_z_reshaped = data_z.reshape(num_pixels, num_bands)
 
+############################################
+############# Gradient Descent #############
+############################################
 
+lr = 10.**-2
+epoch = 1
+
+biases = np.zeros((num_pixels,1))
+
+# Encoder inits
+w1 = weight_init_He(num_bands,64)
+b1 = np.zeros((1,64))
+w2 = weight_init_He(64,16)
+b2 = np.zeros((1,16))
+w3 = weight_init_He(16,8)
+b3 = np.zeros((1,8))
+
+# Decoder inits
+w4 = weight_init_He(8,16)
+b4 = np.zeros((1,16))
+w5 = weight_init_He(16,64)
+b5 = np.zeros((1,64))
+w6 = weight_init_He(64,num_bands)
+b6 = np.zeros((1,num_bands))
+
+w_list = [w1, w2, w3, w4, w5, w6]	
+b_list = [b1, b2, b3, b4, b5, b6]
+
+
+output = forward_pass(w_list, b_list, data_z_reshaped)[0]
+cost = mse_cost(data_z_reshaped, output, num_pixels, num_bands)
+d_cost = mse_der(data_z_reshaped, output, num_pixels, num_bands)
+cost_list = [cost]
+
+# Desired cost optimum given z-score normalization
+while cost > 0.1:
+	epoch += 1
+	output, l_list, cost = forward_pass(w_list, b_list, data_z_reshaped)
+	d_cost = mse_der(data_z_reshaped, output, num_pixels, num_bands)
+	w_list, b_list = update_params(w_list, b_list, l_list, lr, d_cost, num_pixels)
+	cost_list.append(cost)
+	
+	if epoch == 5001:
+		break
+
+epochs = np.linspace(1, epoch, epoch)
+
+fig, ax = plt.subplots()
+
+
+ax.plot(epochs, np.asarray(cost_list))
+
+ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
+ax.grid()
+ax.legend()
+plt.show()
 ############################################
 ############# Gradient Descent #############
 #############   (Coarse) for   #############
 ############# Learning Rate Opt ############
 ############################################
 
-# Learning rates being tested
-e = np.array((-5, -4, -3, -2, -1))
-lr = 10.**e
-num_rates = lr.shape[0]
-num_epochs = 100
-epochs = np.linspace(1,num_epochs,num_epochs)
-cost = np.zeros((num_rates, num_epochs))
+# # Learning rates being tested
+# e = np.array((-5, -4, -3, -2, -1))
+# lr = 10.**e
+# num_rates = lr.shape[0]
+# num_epochs = 100
+# epochs = np.linspace(1,num_epochs,num_epochs)
+# cost = np.zeros((num_rates, num_epochs))
 
-for i in range(num_rates):
-	epoch = 1
+# for i in range(num_rates):
+# 	epoch = 1
 
-	# Reinitializing values for each learning rate
+# 	# Reinitializing values for each learning rate
 
-	biases = np.zeros((num_pixels,1))
+# 	biases = np.zeros((num_pixels,1))
 
-	# Encoder inits
-	w1 = weight_init_He(num_bands,64)
-	b1 = np.zeros((1,64))
-	w2 = weight_init_He(64,16)
-	b2 = np.zeros((1,16))
-	w3 = weight_init_He(16,8)
-	b3 = np.zeros((1,8))
+# 	# Encoder inits
+# 	w1 = weight_init_He(num_bands,64)
+# 	b1 = np.zeros((1,64))
+# 	w2 = weight_init_He(64,16)
+# 	b2 = np.zeros((1,16))
+# 	w3 = weight_init_He(16,8)
+# 	b3 = np.zeros((1,8))
 
-	# Decoder inits
-	w4 = weight_init_He(8,16)
-	b4 = np.zeros((1,16))
-	w5 = weight_init_He(16,64)
-	b5 = np.zeros((1,64))
-	w6 = weight_init_He(64,num_bands)
-	b6 = np.zeros((1,num_bands))
+# 	# Decoder inits
+# 	w4 = weight_init_He(8,16)
+# 	b4 = np.zeros((1,16))
+# 	w5 = weight_init_He(16,64)
+# 	b5 = np.zeros((1,64))
+# 	w6 = weight_init_He(64,num_bands)
+# 	b6 = np.zeros((1,num_bands))
 
-	w_list = [w1, w2, w3, w4, w5, w6]
-	b_list = [b1, b2, b3, b4, b5, b6]
+# 	w_list = [w1, w2, w3, w4, w5, w6]
+# 	b_list = [b1, b2, b3, b4, b5, b6]
 
-	# Mean squared error to start with
-	#output = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[0]
-	#d_cost = mse_der(data_z_reshaped,output)
+# 	for j in range(num_epochs):
+
+# 		#print("Epoch:", epoch)
+
+# 		output, l_list, cost[i,j] = forward_pass(w_list, b_list, data_z_reshaped)
+# 		d_cost = mse_der(data_z_reshaped, output, num_pixels, num_bands)
+
+# 		w_list, b_list = update_params(w_list, b_list, l_list, lr[i], d_cost, num_pixels)
+
+# 		epoch += 1
 	
-	for j in range(num_epochs):
+# colors = cm.rainbow(np.linspace(0,1,num_rates))
+# fig, ax = plt.subplots()
 
-		#print("Epoch:", epoch)
+# for i in range(num_rates):
+# 	ax.plot(epochs, cost[i,:], label=f"lr: {lr[i]:.0e}")
 
-		output, l_list, cost[i,j] = forward_pass(w_list, b_list, data_z_reshaped)
-		d_cost = mse_der(data_z_reshaped, output, num_pixels, num_bands)
-
-		w_list, b_list = update_params(w_list, b_list, l_list, lr[i], d_cost, num_pixels)
-
-		epoch += 1
-	
-colors = cm.rainbow(np.linspace(0,1,num_rates))
-fig, ax = plt.subplots()
-
-for i in range(num_rates):
-	ax.plot(epochs, cost[i,:], label=f"lr: {lr[i]:.0e}")
-
-ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
-ax.grid()
-ax.legend()
-plt.show()
+# ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
+# ax.grid()
+# ax.legend()
+# plt.show()
 
 
