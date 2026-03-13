@@ -64,12 +64,22 @@ def tanh(x):
 ############################################
 
 # Mean Squared Error
-def mse_cost(x,y,n):
-	loss = (y - x)**2
-	return(np.sum(loss) / n)
+def mse_cost(x,y,n,m):
+	# y: reconstruction
+	# x: target
+	# n: number of examples
+	# m: number of bands
 
-def mse_der(x,y):
-	return(-2*(y - x))
+	loss = (y - x)**2
+	return(np.sum(loss) / (n*m))
+
+def mse_der(x,y,n,m):
+	# y: reconstruction
+	# x: target
+	# n: number of examples
+	# m: number of bands
+
+	return(2*(y - x) / (n*m))
 
 ############################################
 ############### Weight Init ################
@@ -81,12 +91,13 @@ def weight_init_He(n,m):
 	# n: input layer size
 	# m: desired output layer size
 
-	stdev = 2 / np.sqrt(n)
+	stdev = np.sqrt(2 / n)
 	w = np.random.normal(0,stdev,size=(n,m))
 	return(w)
 
-def forward_pass(W,b,data_array, channels):
-	num_examples = data_array.shape[1]
+def forward_pass(W,b,data_array):
+	num_examples = data_array.shape[0]
+	channels = data_array.shape[1]
 	
 	# Encoder
 	layer1 = relu(data_array @ W[0] + b[0])
@@ -105,12 +116,12 @@ def forward_pass(W,b,data_array, channels):
 	layer_list = [data_array, layer1, layer2, layer3, layer4, layer5, layer6]
 
 	# Cost function
-	J = mse_cost(data_array, layer6, num_examples)
+	J = mse_cost(data_array, layer6, num_examples, channels)
 
 	#print(J.shape)
 	return(layer6, layer_list, J)
 
-def update_params(W, b, layer, learning_rate, d_J):
+def update_params(W, b, layer, learning_rate, d_J, num_examples):
 	# W : list of weights
 	# W[i] : weight matrix applied to the ith layer
 	# b : list of biases
@@ -133,16 +144,17 @@ def update_params(W, b, layer, learning_rate, d_J):
 	for i in range(len(W) - 2, 0,-1):						# want start with w5 update, so W[4]
 		dz = np.multiply(dq, relu_der(layer[i+1]))			# Layer 5, 7138 x 64		
 
+		# For the next iteration
+		dq = dz @ W[i].T  									# dq_4, 7138 x 16
+
 		# Calculating gradients
-		dW = layer[i].T @ dz 								# dW should have dimensions 16 x 64
-		db = dz
+		dW = layer[i].T @ dz / num_examples 					# dW should have dimensions 16 x 64
+		db = np.sum(dz, axis=0, keepdims=True) / num_examples	# 1 x 64
 
 		# Updating parameters
 		W[i] = W[i] - learning_rate * dW					# W[4] = w5, should be 16 x 64
 		b[i] = b[i] - learning_rate * db
 		
-		# For the next iteration
-		dq = dz @ W[i].T  									# dq_4, 7138 x 16
 
 	return(W, b)
 
@@ -160,15 +172,18 @@ data_reshaped = data.reshape(num_pixels, num_bands)
 # Min-Max normaization would skew the MSE loss towards bands with high variance. Note: each 
 # band is unlikely to be uniformly distributed
 
+'''
 devs = np.zeros((num_bands))
 
 for i in range(num_bands):
 	devs[i] = np.std(data_reshaped[:,i])
 
-## min-max scaling
-# data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
-# for j in range(data.shape[-1]):
-# 	data_normalized[:,:,j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
+# min-max scaling
+data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+for j in range(data.shape[-1]):
+	data_normalized[:,:,j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
+'''
+
 
 # z-scoring
 # Input data is normalized so that the pixels of each band are centered on 0, with stdev = 1
@@ -184,35 +199,6 @@ for j in range(data.shape[-1]):
 
 data_z_reshaped = data_z.reshape(num_pixels, num_bands)
 
-############################################
-############## Initialization ##############
-############################################
-
-biases = np.zeros((num_pixels,1))
-
-# Encoder inits
-w1 = weight_init_He(num_bands,64)
-b1 = 0
-w2 = weight_init_He(64,16)
-b2 = 0
-w3 = weight_init_He(16,8)
-b3 = 0
-
-# Decoder inits
-w4 = weight_init_He(8,16)
-b4 = 0
-w5 = weight_init_He(16,64)
-b5 = 0
-w6 = weight_init_He(64,num_bands)
-b6 = 0
-
-w_list = [w1, w2, w3, w4, w5, w6]
-b_list = [b1, b2, b3, b4, b5, b6]
-l_list = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[1]
-
-# Mean squared error to start with
-output = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[0]
-d_cost = mse_der(data_z_reshaped,output)
 
 ############################################
 ############# Gradient Descent #############
@@ -220,31 +206,64 @@ d_cost = mse_der(data_z_reshaped,output)
 ############# Learning Rate Opt ############
 ############################################
 
-# Learning rate
+# Learning rates being tested
 e = np.array((-5, -4, -3, -2, -1))
 lr = 10.**e
 num_rates = lr.shape[0]
-num_epochs = 20
-epochs = np.linspace(1,20,20)
+num_epochs = 100
+epochs = np.linspace(1,num_epochs,num_epochs)
 cost = np.zeros((num_rates, num_epochs))
-epoch = 1
 
 for i in range(num_rates):
+	epoch = 1
+
+	# Reinitializing values for each learning rate
+
+	biases = np.zeros((num_pixels,1))
+
+	# Encoder inits
+	w1 = weight_init_He(num_bands,64)
+	b1 = np.zeros((1,64))
+	w2 = weight_init_He(64,16)
+	b2 = np.zeros((1,16))
+	w3 = weight_init_He(16,8)
+	b3 = np.zeros((1,8))
+
+	# Decoder inits
+	w4 = weight_init_He(8,16)
+	b4 = np.zeros((1,16))
+	w5 = weight_init_He(16,64)
+	b5 = np.zeros((1,64))
+	w6 = weight_init_He(64,num_bands)
+	b6 = np.zeros((1,num_bands))
+
+	w_list = [w1, w2, w3, w4, w5, w6]
+	b_list = [b1, b2, b3, b4, b5, b6]
+
+	# Mean squared error to start with
+	#output = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[0]
+	#d_cost = mse_der(data_z_reshaped,output)
+	
 	for j in range(num_epochs):
-		output = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[0]
-		cost[i,j] = forward_pass(w_list, b_list, data_z_reshaped, num_bands)[2]	
-		d_cost = mse_der(data_z_reshaped, output)
-		w_list, b_list = update_params(w_list, b_list, l_list, lr[i], d_cost)
+
+		#print("Epoch:", epoch)
+
+		output, l_list, cost[i,j] = forward_pass(w_list, b_list, data_z_reshaped)
+		d_cost = mse_der(data_z_reshaped, output, num_pixels, num_bands)
+
+		w_list, b_list = update_params(w_list, b_list, l_list, lr[i], d_cost, num_pixels)
+
 		epoch += 1
 	
 colors = cm.rainbow(np.linspace(0,1,num_rates))
 fig, ax = plt.subplots()
 
 for i in range(num_rates):
-	ax.plot(epochs, cost[i,:])
+	ax.plot(epochs, cost[i,:], label=f"lr: {lr[i]:.0e}")
 
 ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
 ax.grid()
+ax.legend()
 plt.show()
 
 
