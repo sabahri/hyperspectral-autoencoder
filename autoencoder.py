@@ -25,13 +25,17 @@ num_bands = data.shape[-1]
 
 #print(f'Data Shape: {data.shape[:-1]}\nNumber of Bands:{num_bands}')
 
-## Normalizing band values to 1
-#band_ind = int(sys.argv[1])
-#band = data[:,:,band_ind]
-#band_min = band.min()
-#band_max = band.max()
+###########################################
+########### Plotting Original #############
+###########################################
 
-#band_normalized = (band - band_min)/(band_max - band_min)
+# # Normalizing band values to 1
+# band_ind = int(sys.argv[1])
+# band = data[:,:,band_ind]
+# band_min = band.min()
+# band_max = band.max()
+
+# band_normalized = (band - band_min)/(band_max - band_min)
 
 # # Plotting
 # plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
@@ -72,6 +76,10 @@ def mse_cost(x,y,n,m):
 
 	loss = (y - x)**2
 	return(np.sum(loss) / (n*m))
+
+def mse_pixel_loss(x,y):
+	return(np.mean((y - x)**2, axis=1))
+
 
 def mse_der(x,y,n,m):
 	# y: reconstruction
@@ -202,6 +210,7 @@ data_z_reshaped = data_z.reshape(num_pixels, num_bands)
 ############################################
 ############# Gradient Descent #############
 ############################################
+np.random.seed(42)
 
 lr = 10.**-2
 epoch = 1
@@ -233,28 +242,50 @@ cost = mse_cost(data_z_reshaped, output, num_pixels, num_bands)
 d_cost = mse_der(data_z_reshaped, output, num_pixels, num_bands)
 cost_list = [cost]
 
+
 # Desired cost optimum given z-score normalization
-while cost > 0.1:
+while cost > 0.3:
 	epoch += 1
 	output, l_list, cost = forward_pass(w_list, b_list, data_z_reshaped)
 	d_cost = mse_der(data_z_reshaped, output, num_pixels, num_bands)
 	w_list, b_list = update_params(w_list, b_list, l_list, lr, d_cost, num_pixels)
 	cost_list.append(cost)
 	
-	if epoch == 5001:
-		break
+	# if epoch == 2001:
+	# 	print("Cost at epoch 2000:", cost)
+	# 	break
 
 epochs = np.linspace(1, epoch, epoch)
 
 fig, ax = plt.subplots()
 
-
 ax.plot(epochs, np.asarray(cost_list))
-
 ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
 ax.grid()
-ax.legend()
 plt.show()
+
+######################################################
+############# Visualizing Per-Pixel Loss #############
+######################################################
+
+# Un-normalizing the output
+#recon = np.multiply(output, stdev) + mean
+#recon = recon.reshape(data.shape[0], data.shape[1], data.shape[2])
+
+p_loss = mse_pixel_loss(data_z_reshaped, output)
+ploss_h = np.percentile(p_loss, 99)
+ploss_l = np.percentile(p_loss, 1)
+
+# Clipping highest and lowest value pixels
+p_loss = np.clip(p_loss, ploss_l, ploss_h)
+
+
+p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
+
+p_loss = p_loss.reshape(data.shape[0], data.shape[1])
+plt.imshow(p_loss, cmap='gray',vmin=0,vmax=1)
+plt.show()
+
 ############################################
 ############# Gradient Descent #############
 #############   (Coarse) for   #############
