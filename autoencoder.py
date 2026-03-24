@@ -203,21 +203,22 @@ corr = data_z_reshaped.T @ data_z_reshaped / num_pixels
 eig_val, eig_vec = np.linalg.eigh(corr)				# using eigh instead of eig for symmetrix matrices
 
 # Cumulative explained variance ratio
-cumul = np.cumsum(eig_val) / np.sum(eig_val)
+cumul = np.cumsum(eig_val[::-1]) / np.sum(eig_val)
 pca_num = np.linspace(1, num_bands, num_bands)
 
 # Kneedle algorithm to find curve elbow
-# the eigh fxn stores in order of increasing values, so it should always be 
-# convex and increasing
-kl = kn.KneeLocator(pca_num, cumul, curve="convex", direction="increasing")
+# the eigh fxn stores in order of increasing values
+# --> reversal in cumul should always be concave
+kl = kn.KneeLocator(pca_num, cumul, curve="concave", direction="increasing")
 kl.plot_knee()
 plt.axvline(x = kl.knee,  color='red', linestyle='--', label=f'Knee: {kl.knee:.2f}')
 plt.xlabel('Principal Component Axis Number')
 plt.ylabel('Cumulative Explained Variance Ratio')
 plt.legend()
-plt.show()
+#plt.show()
+#sys.exit()
 
-sys.exit()
+# Conclusion: Knee location was at 10, so bottleneck should be around 10 dims
 
 ############################################
 ############# Gradient Descent #############
