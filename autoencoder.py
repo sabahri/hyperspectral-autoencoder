@@ -203,7 +203,10 @@ corr = data_z_reshaped.T @ data_z_reshaped / num_pixels
 eig_val, eig_vec = np.linalg.eigh(corr)				# using eigh instead of eig for symmetrix matrices
 
 # Cumulative explained variance ratio
-cumul = eig_val / np.sum(eig_val)
+cumul = np.cumsum(eig_val) / np.sum(eig_val)
+
+# Kneedle algorithm to find curve elbow
+
 
 fig, ax = plt.subplots()
 
