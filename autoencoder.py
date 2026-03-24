@@ -180,19 +180,6 @@ data_reshaped = data.reshape(num_pixels, num_bands)
 # Min-Max normaization would skew the MSE loss towards bands with high variance. Note: each 
 # band is unlikely to be uniformly distributed
 
-'''
-devs = np.zeros((num_bands))
-
-for i in range(num_bands):
-	devs[i] = np.std(data_reshaped[:,i])
-
-# min-max scaling
-data_normalized = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
-for j in range(data.shape[-1]):
-	data_normalized[:,:,j] = (data[:,:,j] - data[:,:,j].min()) / (data[:,:,j].max() - data[:,:,j].min())
-'''
-
-
 # z-scoring
 # Input data is normalized so that the pixels of each band are centered on 0, with stdev = 1
 # As a result, a useless network will produce MSE loss ~ 1
@@ -206,6 +193,26 @@ for j in range(data.shape[-1]):
 	data_z[:,:,j] = (data[:,:,j] - mean) / (std + epsilon)		# add infinitesimal epsilon in case std = 0
 
 data_z_reshaped = data_z.reshape(num_pixels, num_bands)
+
+######################################################
+########### Principal Component Analysis #############
+######################################################
+
+# Correlation matrix
+corr = data_z_reshaped.T @ data_z_reshaped / num_pixels
+eig_val, eig_vec = np.linalg.eigh(corr)				# using eigh instead of eig for symmetrix matrices
+
+# Cumulative explained variance ratio
+cumul = eig_val / np.sum(eig_val)
+
+fig, ax = plt.subplots()
+
+pca_num = np.linspace(1, num_bands, num_bands)
+ax.plot(pca_num, cumul)
+ax.set(xlabel='Principal Component Number', ylabel='Cumulative Explained Variance Ratio')
+ax.grid()
+plt.show()
+sys.exit()
 
 ############################################
 ############# Gradient Descent #############
