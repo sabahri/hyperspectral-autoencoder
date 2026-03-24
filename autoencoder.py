@@ -211,12 +211,13 @@ pca_num = np.linspace(1, num_bands, num_bands)
 # --> reversal in cumul should always be concave
 kl = kn.KneeLocator(pca_num, cumul, curve="concave", direction="increasing")
 kl.plot_knee()
-plt.axvline(x = kl.knee,  color='red', linestyle='--', label=f'Knee: {kl.knee:.2f}')
+plt.axvline(x = kl.knee,  color='red', linestyle='--', 
+	label=f'Knee: {kl.knee:.2f} \n Explained Var:{100*cumul[int(kl.knee)]:.2f}%')
 plt.xlabel('Principal Component Axis Number')
 plt.ylabel('Cumulative Explained Variance Ratio')
 plt.legend()
-#plt.show()
-#sys.exit()
+plt.show()
+sys.exit()
 
 # Conclusion: Knee location was at 10, so bottleneck should be around 10 dims
 
