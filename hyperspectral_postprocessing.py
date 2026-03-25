@@ -8,7 +8,13 @@ import numpy as np
 import sys
 
 import hyperspectral_functions as hf
-import hyperspectral_gradient_descent as hgd
+from hyperspectral_functions import data_z_reshaped
+
+checkpoint = np.load('trained_model.npz')
+
+w_list = [checkpoint[f'w{i}'] for i in range(6)]
+b_list = [checkpoint[f'b{i}'] for i in range(6)]
+bottleneck = checkpoint['bottleneck']
 
 ######################################################
 ############# Visualizing Per-Pixel Loss #############
@@ -24,8 +30,6 @@ ploss_l = np.percentile(p_loss, 1)
 
 # Clipping highest and lowest value pixels
 p_loss = np.clip(p_loss, ploss_l, ploss_h)
-
-
 p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
 
 p_loss = p_loss.reshape(data.shape[0], data.shape[1])

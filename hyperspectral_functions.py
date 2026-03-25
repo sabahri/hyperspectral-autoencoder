@@ -217,8 +217,9 @@ plt.axvline(x = kl.knee,  color='red', linestyle='--',
 plt.xlabel('Principal Component Axis Number')
 plt.ylabel('Cumulative Explained Variance Ratio')
 plt.legend()
-plt.show()
-#sys.exit()
+plt.show(block=False)
+plt.pause(0.1)
+
 
 # Conclusion: Knee location was at 10, so bottleneck should be around 10 dims
 
