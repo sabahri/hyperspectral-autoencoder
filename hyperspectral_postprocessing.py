@@ -6,12 +6,17 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 import sys
+import umap
+
 
 import hyperspectral_functions as hf
 from hyperspectral_functions import data_z_reshaped
 
 data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
 ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
+ground_truth_flat = ground_truth.reshape(ground_truth.shape[0]*ground_truth.shape[1],)
+unique_labels = np.unique(ground_truth_flat)
+recoded = np.searchsorted(unique_labels,ground_truth_flat)
 
 checkpoint = np.load('trained_model.npz')
 
@@ -38,6 +43,23 @@ p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
 
 p_loss = p_loss.reshape(data.shape[0], data.shape[1])
 plt.imshow(p_loss, cmap='gray',vmin=0,vmax=1)
+
+################################
+############# UMAP #############
+################################
+
+fit = umap.UMAP(n_components=2,init='random')
+u = fit.fit_transform(bottleneck)
+
+fig = plt.figure()
+
+colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']
+cmap = plt.matplotlib.colors.ListedColormap(colors)
+
+scatter = plt.scatter(u[:,0],u[:,1],c=recoded,cmap=cmap,vmin=1,vmax=6)
+plt.colorbar(scatter)
+plt.title('UMAP embedding of Bottleneck features')
+
 plt.show()
 
 #############################################
