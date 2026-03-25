@@ -1,7 +1,7 @@
 import scipy.io
 from scipy.io import loadmat
-import kneed as kn
-import torch
+#import kneed as kn
+#import torch
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -10,11 +10,15 @@ import sys
 import hyperspectral_functions as hf
 from hyperspectral_functions import data_z_reshaped
 
+data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
+ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
+
 checkpoint = np.load('trained_model.npz')
 
 w_list = [checkpoint[f'w{i}'] for i in range(6)]
 b_list = [checkpoint[f'b{i}'] for i in range(6)]
 bottleneck = checkpoint['bottleneck']
+output = checkpoint['output']
 
 ######################################################
 ############# Visualizing Per-Pixel Loss #############

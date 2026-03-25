@@ -7,7 +7,7 @@
 import scipy.io
 from scipy.io import loadmat
 import kneed as kn
-import torch
+#import torch
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -207,18 +207,21 @@ eig_val, eig_vec = np.linalg.eigh(corr)				# using eigh instead of eig for symme
 cumul = np.cumsum(eig_val[::-1]) / np.sum(eig_val)
 pca_num = np.linspace(1, num_bands, num_bands)
 
+
 # Kneedle algorithm to find curve elbow
 # the eigh fxn stores in order of increasing values
 # --> reversal in cumul should always be concave
-kl = kn.KneeLocator(pca_num, cumul, curve="concave", direction="increasing")
-kl.plot_knee()
-plt.axvline(x = kl.knee,  color='red', linestyle='--', 
-	label=f'Knee: {kl.knee:.2f} \n Explained Var:{100*cumul[int(kl.knee)]:.2f}%')
-plt.xlabel('Principal Component Axis Number')
-plt.ylabel('Cumulative Explained Variance Ratio')
-plt.legend()
-plt.show(block=False)
-plt.pause(0.1)
+
+if __name__ == "__main__":
+	kl = kn.KneeLocator(pca_num, cumul, curve="concave", direction="increasing")
+	kl.plot_knee()
+	plt.axvline(x = kl.knee,  color='red', linestyle='--', 
+		label=f'Knee: {kl.knee:.2f} \n Explained Var:{100*cumul[int(kl.knee)]:.2f}%')
+	plt.xlabel('Principal Component Axis Number')
+	plt.ylabel('Cumulative Explained Variance Ratio')
+	plt.legend()
+	plt.show(block=False)
+	plt.pause(0.1)
 
 
 # Conclusion: Knee location was at 10, so bottleneck should be around 10 dims

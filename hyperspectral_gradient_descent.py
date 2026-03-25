@@ -1,7 +1,7 @@
 import scipy.io
 from scipy.io import loadmat
 import kneed as kn
-import torch
+#import torch
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -70,11 +70,12 @@ while cost > 0.3:
 
 l_list = hf.forward_pass(w_list,b_list,data_z_reshaped)[1]
 bottleneck = l_list[3]
+output = l_list[-1]
 
 np.savez('trained_model.npz',
 	w0=w_list[0], w1=w_list[1], w2=w_list[2], w3=w_list[3], w4=w_list[4], w5=w_list[5],
     b0=b_list[0], b1=b_list[1], b2=b_list[2], b3=b_list[3], b4=b_list[4], b5=b_list[5],
-    bottleneck=bottleneck)
+    bottleneck=bottleneck, output=output)
 
 epochs = np.linspace(1, epoch, epoch)
 
