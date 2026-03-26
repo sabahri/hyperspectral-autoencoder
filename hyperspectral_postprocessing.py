@@ -53,11 +53,20 @@ u = fit.fit_transform(bottleneck)
 
 fig = plt.figure()
 
-colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']
+colors = ['gray', 'blue', 'orange', 'green', 'red', 'purple', 'brown']
 cmap = plt.matplotlib.colors.ListedColormap(colors)
 
-scatter = plt.scatter(u[:,0],u[:,1],c=recoded,cmap=cmap,vmin=1,vmax=6)
-plt.colorbar(scatter)
+scatter = plt.scatter(u[:,0],u[:,1],c=recoded,cmap=cmap,vmin=0,vmax=6, edgecolor='k', linewidth=0.3)
+class_names = ['Background', 'Brocoli_green_weeds_1', 'Corn_senesced_green_weeds', 
+                'Lettuce_romaine_4wk', 'Lettuce_romaine_5wk', 
+                'Lettuce_romaine_6wk', 'Lettuce_romaine_7wk']
+
+handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[i], 
+           markersize=8, label=class_names[i]) for i in range(len(class_names))]
+plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+
+#plt.colorbar(scatter)
 plt.title('UMAP embedding of Bottleneck features')
 
 plt.show()
