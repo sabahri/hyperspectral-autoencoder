@@ -16,6 +16,8 @@ data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
 ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
 ground_truth_flat = ground_truth.reshape(ground_truth.shape[0]*ground_truth.shape[1],)
 unique_labels = np.unique(ground_truth_flat)
+gt_classnum = len(unique_labels)
+
 recoded = np.searchsorted(unique_labels,ground_truth_flat)
 
 checkpoint = np.load('trained_model.npz')
@@ -48,6 +50,8 @@ plt.imshow(p_loss, cmap='gray',vmin=0,vmax=1)
 ############# UMAP #############
 ################################
 
+# https://umap-learn.readthedocs.io/en/latest/index.html
+
 fit = umap.UMAP(n_components=2,init='random')
 u = fit.fit_transform(bottleneck)
 
@@ -63,17 +67,45 @@ class_names = ['Background', 'Brocoli_green_weeds_1', 'Corn_senesced_green_weeds
 
 handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[i], 
            markersize=8, label=class_names[i]) for i in range(len(class_names))]
+
 plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
-
-#plt.colorbar(scatter)
 plt.title('UMAP embedding of Bottleneck features')
 
-plt.show()
+#plt.show()
 
 #############################################
-############# KMC on Bottleneck #############
+############# GMM on Bottleneck #############
 #############################################
 
-# To compare against ground truth labels
+# Expectation
+
+# Cluster Weights
+w_pi = np.random.random(gt_classnum)
+w_pi /= w_pi.sum()
+
+# Covariance matrix from mean-centered data
+# n = number of pixels, m = number of dimensions
+n,m = bottleneck.shape[0], bottleneck.shape[1]
+
+# Constructing feature-scaled bottleneck matrix (min/max normalization)
+# 7138 x 10
+Xb = np.zeros((n,m))
+
+for i in range(m):
+    bot_min = np.min(bottleneck[:,i])
+    bot_max = np.max(bottleneck[:,i])
+    Xb[:,i] = (bottleneck[:,i] - bot_min) / (bot_max - bot_min)
+
+cov = Xb.T @ Xb
+
+mu = np.zeros((m,gt_classnum))
+
+mu[0,:] = bottleneck[np.random.randint(1,n),:]
+
+
+
+
+
+
 
