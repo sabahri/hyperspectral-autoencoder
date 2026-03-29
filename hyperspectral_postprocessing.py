@@ -88,21 +88,14 @@ w_pi /= w_pi.sum()
 # n = number of pixels, m = number of dimensions
 n,m = bottleneck.shape[0], bottleneck.shape[1]
 
-# Constructing feature-scaled bottleneck matrix (min/max normalization)
+# Constructing Covariance matrix
 # 7138 x 10
-Xb = np.zeros((n,m))
-
-for i in range(m):
-    bot_min = np.min(bottleneck[:,i])
-    bot_max = np.max(bottleneck[:,i])
-    Xb[:,i] = (bottleneck[:,i] - bot_min) / (bot_max - bot_min)
-
+Xb = bottleneck / n
 cov = Xb.T @ Xb
 
 mu = np.zeros((m,gt_classnum))
-
 mu[0,:] = bottleneck[np.random.randint(1,n),:]
-
+for i in range(n):
 
 
 
