@@ -44,7 +44,7 @@ p_loss = np.clip(p_loss, ploss_l, ploss_h)
 p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
 
 p_loss = p_loss.reshape(data.shape[0], data.shape[1])
-plt.imshow(p_loss, cmap='gray',vmin=0,vmax=1)
+plt.imshow(p_loss, cmap='plasma',vmin=0,vmax=1)
 
 ################################
 ############# UMAP #############
@@ -72,8 +72,6 @@ plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
 plt.title('UMAP embedding of Bottleneck features')
 
-#plt.show()
-
 #############################################
 ############# GMM on Bottleneck #############
 #############################################
@@ -98,11 +96,11 @@ for i in range(m):
 # Covariance matrix
 cov = Xb.T @ Xb / n
 
-# mu = np.zeros((m,gt_classnum))
-# mu[0,:] = bottleneck[np.random.randint(1,n),:]
-# for i in range(n):
+mu = np.zeros((m,gt_classnum))
+mu[0,:] = bottleneck[np.random.randint(1,n),:]
+for i in range(n):
 
-
+plt.show()
 
 
 
