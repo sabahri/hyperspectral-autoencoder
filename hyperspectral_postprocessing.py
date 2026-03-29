@@ -31,6 +31,15 @@ output = checkpoint['output']
 ############# Visualizing Per-Pixel Loss #############
 ######################################################
 
+# Raw data
+# Normalizing band values to 1
+band_ind = 100
+band = data[:,:,band_ind]
+band_min = band.min()
+band_max = band.max()
+
+band_normalized = (band - band_min)/(band_max - band_min)
+
 # Un-normalizing the output
 #recon = np.multiply(output, stdev) + mean
 #recon = recon.reshape(data.shape[0], data.shape[1], data.shape[2])
@@ -44,7 +53,28 @@ p_loss = np.clip(p_loss, ploss_l, ploss_h)
 p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
 
 p_loss = p_loss.reshape(data.shape[0], data.shape[1])
-plt.imshow(p_loss, cmap='plasma',vmin=0,vmax=1)
+#plt.imshow(p_loss, cmap='plasma',vmin=0,vmax=1)
+
+Titles = ["SalinasA Band 100", "Per Pixel Loss"]
+images = [band_normalized,p_loss] #, edges]
+count = len(images)
+
+plt.figure()
+
+for i in range(count):
+    plt.subplot(1, len(images), i+1)
+    plt.title(Titles[i])
+    plt.imshow(images[i])
+    if i == 1:
+        plt.imshow(p_loss, cmap='plasma',vmin=0,vmax=1)
+    else:
+        plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
+
+plt.tight_layout
+
+# # Plotting
+# plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
+# plt.show()
 
 ################################
 ############# UMAP #############
@@ -96,9 +126,9 @@ for i in range(m):
 # Covariance matrix
 cov = Xb.T @ Xb / n
 
-mu = np.zeros((m,gt_classnum))
-mu[0,:] = bottleneck[np.random.randint(1,n),:]
-for i in range(n):
+# mu = np.zeros((m,gt_classnum))
+# mu[0,:] = bottleneck[np.random.randint(1,n),:]
+# for i in range(n):
 
 plt.show()
 
