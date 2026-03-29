@@ -88,14 +88,19 @@ w_pi /= w_pi.sum()
 # n = number of pixels, m = number of dimensions
 n,m = bottleneck.shape[0], bottleneck.shape[1]
 
-# Constructing Covariance matrix
+# Constructing mean-centered feature matrix
 # 7138 x 10
-Xb = bottleneck / n
-cov = Xb.T @ Xb
+Xb = np.zeros((n,m))
 
-mu = np.zeros((m,gt_classnum))
-mu[0,:] = bottleneck[np.random.randint(1,n),:]
-for i in range(n):
+for i in range(m):
+    Xb[:,i] = bottleneck[:,i] - np.mean(bottleneck[:,i])
+
+# Covariance matrix
+cov = Xb.T @ Xb / n
+
+# mu = np.zeros((m,gt_classnum))
+# mu[0,:] = bottleneck[np.random.randint(1,n),:]
+# for i in range(n):
 
 
 
