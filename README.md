@@ -24,7 +24,9 @@ The input includes wide ranges of values, so minimizing the MSE cost on the raw 
 Finally, postprocessing shows the following:
 
 (1) The per-pixel loss, indicating ambiguous areas in the SalinasA scene for the network to interpret
+
 <img width="640" height="480" alt="Figure1" src=https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/perpixel_loss.png/>
 
 (2) UMAP projection of the bottleneck layer colored by ground truth, showing that the network is able to preserve clustering information regarding detecting pixel types in the data, largely aligning with crop type and growth stage.
+
 <img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/UMAP.png" />
