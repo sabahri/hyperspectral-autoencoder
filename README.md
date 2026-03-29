@@ -14,6 +14,6 @@ My aim was to build a self-supervised autoencoder, which breaks down the data fr
 
 # 2. Architecture
 
-<img width="640" height="480" alt="Figure1" src="https://github.com/user-attachments/assets/03166fa1-0860-4e63-a5f6-520442966169" />
+<img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/hyperspectral_autoencoder_nn_diagram_v8.svg" />
 
 # 3. Script Summary
