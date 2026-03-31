@@ -4,6 +4,7 @@ from scipy.io import loadmat
 #import torch
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import sys
 import umap
@@ -55,23 +56,16 @@ p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
 p_loss = p_loss.reshape(data.shape[0], data.shape[1])
 #plt.imshow(p_loss, cmap='plasma',vmin=0,vmax=1)
 
-Titles = ["SalinasA Band 100", "Per Pixel Loss"]
-images = [band_normalized,p_loss] #, edges]
-count = len(images)
+fig, (ax1, ax2) = plt.subplots(1, 2)
 
-plt.figure()
+ax1.imshow(band_normalized, cmap='gray', vmin=0, vmax=1)
+ax1.set_title('Band 100')
 
-for i in range(count):
-    plt.subplot(1, len(images), i+1)
-    plt.title(Titles[i])
-    plt.imshow(images[i])
-    if i == 1:
-        plt.imshow(p_loss, cmap='plasma',vmin=0,vmax=1)
-    else:
-        plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
+im = ax2.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
+ax2.set_title('Per-Pixel Loss')
 
-plt.tight_layout
-
+fig.colorbar(im, ax=[ax1, ax2], label='Per-Pixel Loss', fraction=0.015, pad=0.04)
+plt.subplots_adjust(right=0.85)
 ################################
 ############# UMAP #############
 ################################
@@ -129,16 +123,6 @@ vec = b[k,:]
 mu.append(vec)
 # 7137 x 10
 b = np.delete(b, k, 0)
-
-# Find vector that is farthest from the nearest selected centroid
-for i in range(1 , gt_classnum + 1):
-    max_diff = np.zeros((i,))
-    mu_arr = np.asarray(mu)
-    for j in range(mu_arr.shape[0]):
-        max_diff = np.argmax(np.linalg.norm(b - mu_arr[j]))
-
-
-
 max_diff = np.argmax(np.linalg.norm(b - mu[0]))
 mu.append(b[max_diff,:])
 b = np.delete(b, max_diff, 0)
