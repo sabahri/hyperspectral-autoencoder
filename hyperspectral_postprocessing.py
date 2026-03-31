@@ -118,17 +118,26 @@ cov = Xb.T @ Xb / n
 b = bottleneck
 
 mu = []
-k = np.random.randint(1,n)
-vec = b[k,:]
+ri = np.random.randint(1,n)
+vec = b[ri,:]
 mu.append(vec)
 # 7137 x 10
-b = np.delete(b, k, 0)
-max_diff = np.argmax(np.linalg.norm(b - mu[0]))
-mu.append(b[max_diff,:])
-b = np.delete(b, max_diff, 0)
+b = np.delete(b, ri, 0)
 
+# Farthest Point Sampling
+for i in range(1, gt_classnum):
+    dist = []
+    # Parse through current mu vectors
+    for j in range(len(mu)):
+        # subtract mu vector from remaining bottleneck vectors
+        dist.append(np.linalg.norm(b - mu[j], axis = 1))
+    dist = np.vstack(dist)
 
+    min_dist = np.min(dist,axis=0)
+    new_mu = np.argmax(min_dist)
+    mu.append(b[new_mu])
 
+    b = np.delete(b, new_mu,0)
 
 plt.show()
 
