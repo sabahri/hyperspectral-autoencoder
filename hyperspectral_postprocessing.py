@@ -72,10 +72,6 @@ for i in range(count):
 
 plt.tight_layout
 
-# # Plotting
-# plt.imshow(band_normalized, cmap='gray',vmin=0,vmax=1)
-# plt.show()
-
 ################################
 ############# UMAP #############
 ################################
@@ -113,22 +109,42 @@ w_pi = np.random.random(gt_classnum)
 w_pi /= w_pi.sum()
 
 # Covariance matrix from mean-centered data
-# n = number of pixels, m = number of dimensions
-n,m = bottleneck.shape[0], bottleneck.shape[1]
+# n = number of pixels, d = number of dimensions
+n,d = bottleneck.shape[0], bottleneck.shape[1]
 
 # Constructing mean-centered feature matrix
+# Then the covariance matrix
 # 7138 x 10
-Xb = np.zeros((n,m))
-
-for i in range(m):
+Xb = np.zeros((n,d))
+for i in range(d):
     Xb[:,i] = bottleneck[:,i] - np.mean(bottleneck[:,i])
-
-# Covariance matrix
 cov = Xb.T @ Xb / n
 
-# mu = np.zeros((m,gt_classnum))
-# mu[0,:] = bottleneck[np.random.randint(1,n),:]
-# for i in range(n):
+# 7138 x 10
+b = bottleneck
+
+mu = []
+k = np.random.randint(1,n)
+vec = b[k,:]
+mu.append(vec)
+# 7137 x 10
+b = np.delete(b, k, 0)
+
+# Find vector that is farthest from the nearest selected centroid
+for i in range(1 , gt_classnum + 1):
+    max_diff = np.zeros((i,))
+    mu_arr = np.asarray(mu)
+    for j in range(mu_arr.shape[0]):
+        max_diff = np.argmax(np.linalg.norm(b - mu_arr[j]))
+
+
+
+max_diff = np.argmax(np.linalg.norm(b - mu[0]))
+mu.append(b[max_diff,:])
+b = np.delete(b, max_diff, 0)
+
+
+
 
 plt.show()
 
