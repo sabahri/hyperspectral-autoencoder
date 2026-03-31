@@ -96,7 +96,7 @@ plt.title('UMAP embedding of Bottleneck features')
 ############# GMM on Bottleneck #############
 #############################################
 
-# Expectation
+################ Expectation ################
 
 # Cluster Weights
 w_pi = np.random.random(gt_classnum)
@@ -117,10 +117,10 @@ cov = Xb.T @ Xb / n
 # 7138 x 10
 b = bottleneck
 
-mu = []
+mu_init = []
 ri = np.random.randint(1,n)
 vec = b[ri,:]
-mu.append(vec)
+mu_init.append(vec)
 # 7137 x 10
 b = np.delete(b, ri, 0)
 
@@ -128,16 +128,21 @@ b = np.delete(b, ri, 0)
 for i in range(1, gt_classnum):
     dist = []
     # Parse through current mu vectors
-    for j in range(len(mu)):
+    for j in range(len(mu_init)):
         # subtract mu vector from remaining bottleneck vectors
-        dist.append(np.linalg.norm(b - mu[j], axis = 1))
+        dist.append(np.linalg.norm(b - mu_init[j], axis = 1))
     dist = np.vstack(dist)
 
     min_dist = np.min(dist,axis=0)
-    new_mu = np.argmax(min_dist)
-    mu.append(b[new_mu])
+    new_mu_ind = np.argmax(min_dist)
+    mu_init.append(b[new_mu_ind])
 
-    b = np.delete(b, new_mu,0)
+    b = np.delete(b, new_mu_ind, 0)
+
+# 7 x 10
+mu_init = np.asarray(mu_init)
+
+################ Maximization ################
 
 plt.show()
 
