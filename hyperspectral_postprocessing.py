@@ -105,8 +105,8 @@ n,d = bottleneck.shape[0], bottleneck.shape[1]
 
 # Initiate random cluster Weights
 # (7,)
-w_pi = np.random.random(gt_classnum)
-w_pi /= w_pi.sum()
+w_pi_init = np.random.random(gt_classnum)
+w_pi_init /= w_pi.sum()
 
 # 7138 x 10
 b = bottleneck
@@ -150,8 +150,8 @@ cov_list = cov_list * gt_classnum
 # 7 x 10 x 10
 cov_init = np.stack(cov_list, axis=0) 
 
+# Expectation Maximization Function
 
-# Expectation Maximization
 def expect_max(weights, means, covs, bneck, classes):
     # Bottleneck : 7138 x 10
     # w_pi : (7,)
@@ -167,24 +167,35 @@ def expect_max(weights, means, covs, bneck, classes):
         posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means[k,:], covs[k,:,:])
 
     # normalizing posterior for each pixel across all clusters:
-    posterior /= np.sum(posterior, axis=1)[:,None]
+    # (7138,)
+    post_sum = np.sum(posterior, axis=1)[:,None]
+    # 7138 x 7
+    post_norm = posterior / post_sum
+
+    log_like = np.sum(np.log(post_sum))
 
     # (7,)
-    count = np.sum(posterior,axis=0)
+    count = np.sum(post_norm,axis=0)
 
     # maximization
     for k in range(classes):
         weights[k] = count[k] / pixels
-        means[k,:] = posterior[:,k] @ bneck / count[k]
+        means[k,:] = post_norm[:,k] @ bneck / count[k]
 
         # Deviation, 7138 x 10
         dev = (bneck - means[k,:])
         # Responsibility, 7138 x 1
-        resp = posterior[:,k][:,None]
+        resp = post_norm[:,k][:,None]
         # 1 x 10 x 10
         covs[k,:,:] = dev.T @ (resp * dev) / count[k]
 
-    return(weights, means, covs)
+    return(log_like, weights, means, covs)
+
+# Running GMM
+
+LL, w_pi, mu, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
+
+
 
 plt.show()
 
