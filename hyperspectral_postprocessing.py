@@ -1,3 +1,6 @@
+# Resource for log-sum-exp trick: https://mc-stan.org/docs/2_27/stan-users-guide/log-sum-of-exponentials.html
+
+
 import scipy.io
 from scipy.io import loadmat
 from scipy.stats import multivariate_normal
@@ -161,20 +164,34 @@ def expect_max(weights, means, covs, bneck, classnum):
     pixels = bneck.shape[0]
     dims = bneck.shape[1]
     # posterior : 7138 x 7
-    posterior = np.zeros((pixels,classnum))
+    #posterior = np.zeros((pixels,classnum))
+    log_post = np.zeros((pixels,classnum))
+
     # expectation
     for k in range(classnum):
         # 7138 x 1
-        posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means[k,:], covs[k,:,:])
+        #posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means[k,:], covs[k,:,:])
+        log_post[:,k] = np.log(weights[k]) + multivariate_normal.logpdf(bneck, means[k,:], covs[k,:,:])
 
     # normalizing posterior for each pixel across all clusters:
     # (7138,)
-    post_sum = np.sum(posterior, axis=1)[:,None]
-    print(post_sum)
-    # 7138 x 7
-    post_norm = posterior / post_sum
+    #post_sum = np.sum(posterior, axis=1)[:,None]
+    #log_like = np.sum(np.log(post_sum))
 
-    log_like = np.sum(np.log(post_sum))
+    # log-sum-exp trick
+    # 7138 x 1
+    log_post_max = np.max(log_post, axis=1, keepdims=True)
+    log_post_diff = log_post - log_post_max
+    exp_log_post_diff = np.exp(log_post_diff)
+    # log_post_sum = log-sum-exp
+    # 7138 x 1
+    log_post_sum = log_post_max + np.log(np.sum(exp_log_post_diff, axis=1,keepdims=True))
+
+    log_like = np.sum(log_post_sum)
+
+    # 7138 x 7
+    #post_norm = posterior / post_sum
+    post_norm = np.exp(log_post - log_post_sum)
 
     # (7,)
     count = np.sum(post_norm,axis=0)
@@ -200,12 +217,11 @@ def expect_max(weights, means, covs, bneck, classnum):
 
 epsilon = 10**-3
 LL_old, w_pi, mu, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
-#print(covariance)
 LL_new = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)[0]
 epoch = 1
 
 while np.abs(LL_new - LL_old) > epsilon:
-    epoch =+ 1
+    epoch +=1
     LL_old = LL_new
     LL_new, w_pi, mu, covariance = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)
 
