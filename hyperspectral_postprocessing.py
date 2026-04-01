@@ -148,17 +148,23 @@ for i in range(d):
 # 10 x 10
 covariance = Xb.T @ Xb / n
 
-# Bottleneck : 7138 x 10
-# w_pi : (7,)
-# mu_init : 7 x 10
-# covariance : 10 x 10
+# Finally, calculating the posterior
+def expect(weights, means, covs, bneck, classes):
+    # Bottleneck : 7138 x 10
+    # w_pi : (7,)
+    # mu_init : 7 x 10
+    # covariance : 10 x 10
 
-posterior = np.zeros((n,gt_classnum))       # 7138 x 7 (one probability per pixel per cluster)
-for k in range(gt_classnum):
-    posterior[:,k] = w_pi[k] * multivariate_normal.pdf(bottleneck,mu_init[k,:], covariance)
-
+    posterior = np.zeros((bneck.shape[0],classes))
+    for k in range(classes):
+        posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means, covs)
+    return(posterior)
 
 ################ Maximization ################
+
+def maximize(weights, means, covs, bneck, classes):
+    posterior = expect(weights, means, covs, bneck, classes)
+
 
 plt.show()
 
