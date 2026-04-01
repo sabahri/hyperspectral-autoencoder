@@ -147,6 +147,10 @@ for i in range(d):
     Xb[:,i] = bottleneck[:,i] - np.mean(bottleneck[:,i])
 # 10 x 10
 covariance = Xb.T @ Xb / n
+cov_list = [covariance]
+cov_list = cov_list * gt_classnum
+cov_init = np.stack(cov_list, axis=0) 
+
 
 # Finally, calculating the posterior
 def expect(weights, means, covs, bneck, classes):
@@ -157,7 +161,7 @@ def expect(weights, means, covs, bneck, classes):
 
     posterior = np.zeros((bneck.shape[0],classes))
     for k in range(classes):
-        posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means, covs)
+        posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means[k,:], covs[k,:,:])
     return(posterior)
 
 ################ Maximization ################
