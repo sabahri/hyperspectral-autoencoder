@@ -97,8 +97,6 @@ plt.title('UMAP embedding of Bottleneck features')
 ############# GMM on Bottleneck #############
 #############################################
 
-################ Expectation ################
-
 # Initializing model parameters
 
 # Covariance matrix from mean-centered data
@@ -149,26 +147,44 @@ for i in range(d):
 covariance = Xb.T @ Xb / n
 cov_list = [covariance]
 cov_list = cov_list * gt_classnum
+# 7 x 10 x 10
 cov_init = np.stack(cov_list, axis=0) 
 
 
-# Finally, calculating the posterior
-def expect(weights, means, covs, bneck, classes):
+# Expectation Maximization
+def expect_max(weights, means, covs, bneck, classes):
     # Bottleneck : 7138 x 10
     # w_pi : (7,)
     # mu_init : 7 x 10
     # covariance : 10 x 10
 
-    posterior = np.zeros((bneck.shape[0],classes))
+    pixels = bneck.shape[0]
+    # posterior : 7138 x 7
+    posterior = np.zeros((pixels,classes))
+    # expectation
     for k in range(classes):
+        # 7138 x 1
         posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means[k,:], covs[k,:,:])
-    return(posterior)
 
-################ Maximization ################
+    # normalizing posterior for each pixel across all clusters:
+    posterior /= np.sum(posterior, axis=1)[:,None]
 
-def maximize(weights, means, covs, bneck, classes):
-    posterior = expect(weights, means, covs, bneck, classes)
+    # (7,)
+    count = np.sum(posterior,axis=0)
 
+    # maximization
+    for k in range(classes):
+        weights[k] = count[k] / pixels
+        means[k,:] = posterior[:,k] @ bneck / count[k]
+
+        # Deviation, 7138 x 10
+        dev = (bneck - means[k,:])
+        # Responsibility, 7138 x 1
+        resp = posterior[:,k][:,None]
+        # 1 x 10 x 10
+        covs[k,:,:] = dev.T @ (resp * dev) / count[k]
+
+    return(weights, means, covs)
 
 plt.show()
 
