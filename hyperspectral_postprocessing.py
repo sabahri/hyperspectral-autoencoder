@@ -106,7 +106,7 @@ n,d = bottleneck.shape[0], bottleneck.shape[1]
 # Initiate random cluster Weights
 # (7,)
 w_pi_init = np.random.random(gt_classnum)
-w_pi_init /= w_pi.sum()
+w_pi_init /= w_pi_init.sum()
 
 # 7138 x 10
 b = bottleneck
@@ -144,31 +144,33 @@ Xb = np.zeros((n,d))
 for i in range(d):
     Xb[:,i] = bottleneck[:,i] - np.mean(bottleneck[:,i])
 # 10 x 10
-covariance = Xb.T @ Xb / n
-cov_list = [covariance]
+cov_1 = Xb.T @ Xb / n
+cov_list = [cov_1]
 cov_list = cov_list * gt_classnum
 # 7 x 10 x 10
 cov_init = np.stack(cov_list, axis=0) 
 
 # Expectation Maximization Function
 
-def expect_max(weights, means, covs, bneck, classes):
+def expect_max(weights, means, covs, bneck, classnum):
     # Bottleneck : 7138 x 10
     # w_pi : (7,)
     # mu_init : 7 x 10
     # covariance : 10 x 10
 
     pixels = bneck.shape[0]
+    dims = bneck.shape[1]
     # posterior : 7138 x 7
-    posterior = np.zeros((pixels,classes))
+    posterior = np.zeros((pixels,classnum))
     # expectation
-    for k in range(classes):
+    for k in range(classnum):
         # 7138 x 1
         posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means[k,:], covs[k,:,:])
 
     # normalizing posterior for each pixel across all clusters:
     # (7138,)
     post_sum = np.sum(posterior, axis=1)[:,None]
+    print(post_sum)
     # 7138 x 7
     post_norm = posterior / post_sum
 
@@ -177,8 +179,9 @@ def expect_max(weights, means, covs, bneck, classes):
     # (7,)
     count = np.sum(post_norm,axis=0)
 
+    l = 10**-7      # smaller than smallest diagonal element in initiating covariance matrix
     # maximization
-    for k in range(classes):
+    for k in range(classnum):
         weights[k] = count[k] / pixels
         means[k,:] = post_norm[:,k] @ bneck / count[k]
 
@@ -188,15 +191,25 @@ def expect_max(weights, means, covs, bneck, classes):
         resp = post_norm[:,k][:,None]
         # 1 x 10 x 10
         covs[k,:,:] = dev.T @ (resp * dev) / count[k]
+        covs[k,:,:] = covs[k,:,:] + l*np.eye((dims))
 
+    # In the first run, the log likelihood corresponds to initiating values
     return(log_like, weights, means, covs)
 
 # Running GMM
 
-LL, w_pi, mu, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
+epsilon = 10**-3
+LL_old, w_pi, mu, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
+#print(covariance)
+LL_new = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)[0]
+epoch = 1
 
+while np.abs(LL_new - LL_old) > epsilon:
+    epoch =+ 1
+    LL_old = LL_new
+    LL_new, w_pi, mu, covariance = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)
 
-
+print(epoch)
 plt.show()
 
 
