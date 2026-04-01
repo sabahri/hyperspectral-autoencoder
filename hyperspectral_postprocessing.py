@@ -1,6 +1,5 @@
 # Resource for log-sum-exp trick: https://mc-stan.org/docs/2_27/stan-users-guide/log-sum-of-exponentials.html
 
-
 import scipy.io
 from scipy.io import loadmat
 from scipy.stats import multivariate_normal
@@ -12,7 +11,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import sys
 import umap
-
 
 import hyperspectral_functions as hf
 from hyperspectral_functions import data_z_reshaped
@@ -32,44 +30,6 @@ b_list = [checkpoint[f'b{i}'] for i in range(6)]
 bottleneck = checkpoint['bottleneck']
 output = checkpoint['output']
 
-######################################################
-############# Visualizing Per-Pixel Loss #############
-######################################################
-
-# Raw data
-# Normalizing band values to 1
-band_ind = 100
-band = data[:,:,band_ind]
-band_min = band.min()
-band_max = band.max()
-
-band_normalized = (band - band_min)/(band_max - band_min)
-
-# Un-normalizing the output
-#recon = np.multiply(output, stdev) + mean
-#recon = recon.reshape(data.shape[0], data.shape[1], data.shape[2])
-
-p_loss = hf.mse_pixel_loss(data_z_reshaped, output)
-ploss_h = np.percentile(p_loss, 99)
-ploss_l = np.percentile(p_loss, 1)
-
-# Clipping highest and lowest value pixels
-p_loss = np.clip(p_loss, ploss_l, ploss_h)
-p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
-
-p_loss = p_loss.reshape(data.shape[0], data.shape[1])
-#plt.imshow(p_loss, cmap='plasma',vmin=0,vmax=1)
-
-fig, (ax1, ax2) = plt.subplots(1, 2)
-
-ax1.imshow(band_normalized, cmap='gray', vmin=0, vmax=1)
-ax1.set_title('Band 100')
-
-im = ax2.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
-ax2.set_title('Per-Pixel Loss')
-
-fig.colorbar(im, ax=[ax1, ax2], label='Per-Pixel Loss', fraction=0.015, pad=0.04)
-plt.subplots_adjust(right=0.85)
 ################################
 ############# UMAP #############
 ################################
@@ -114,6 +74,7 @@ w_pi_init /= w_pi_init.sum()
 # 7138 x 10
 b = bottleneck
 
+np.random.seed(42)
 # Initiate mean vectors using FPS
 mu_init = []
 ri = np.random.randint(1,n)
@@ -186,12 +147,12 @@ def expect_max(weights, means, covs, bneck, classnum):
     # log_post_sum = log-sum-exp
     # 7138 x 1
     log_post_sum = log_post_max + np.log(np.sum(exp_log_post_diff, axis=1,keepdims=True))
-
     log_like = np.sum(log_post_sum)
 
     # 7138 x 7
     #post_norm = posterior / post_sum
     post_norm = np.exp(log_post - log_post_sum)
+    label = np.argmax(post_norm, axis=1)
 
     # (7,)
     count = np.sum(post_norm,axis=0)
@@ -211,23 +172,60 @@ def expect_max(weights, means, covs, bneck, classnum):
         covs[k,:,:] = covs[k,:,:] + l*np.eye((dims))
 
     # In the first run, the log likelihood corresponds to initiating values
-    return(log_like, weights, means, covs)
+    return(label, log_like, weights, means, covs)
 
 # Running GMM
 
 epsilon = 10**-3
-LL_old, w_pi, mu, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
-LL_new = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)[0]
+assign, LL_old, w_pi, mu, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
+LL_new = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)[1]
 epoch = 1
 
 while np.abs(LL_new - LL_old) > epsilon:
     epoch +=1
     LL_old = LL_new
-    LL_new, w_pi, mu, covariance = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)
+    assign, LL_new, w_pi, mu, covariance = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)
 
-print(epoch)
+print(w_pi)
+print(np.unique(assign, return_counts=True))
+###############################################
+############# Visualizing Results #############
+###############################################
+
+# Raw data
+# Normalizing band values to 1
+band_ind = 100
+band = data[:,:,band_ind]
+band_min = band.min()
+band_max = band.max()
+
+band_normalized = (band - band_min)/(band_max - band_min)
+assign_map = assign.reshape(data.shape[0], data.shape[1])
+
+# Un-normalizing the output
+#recon = np.multiply(output, stdev) + mean
+#recon = recon.reshape(data.shape[0], data.shape[1], data.shape[2])
+
+p_loss = hf.mse_pixel_loss(data_z_reshaped, output)
+ploss_h = np.percentile(p_loss, 99)
+ploss_l = np.percentile(p_loss, 1)
+
+# Clipping highest and lowest value pixels
+p_loss = np.clip(p_loss, ploss_l, ploss_h)
+p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
+
+p_loss = p_loss.reshape(data.shape[0], data.shape[1])
+
+fig, (ax1, ax2) = plt.subplots(1, 2)
+
+ax1.imshow(assign_map, cmap=cmap, vmin=0, vmax=1)
+ax1.set_title('Band 100, GMM Mapping')
+ax1.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+im = ax2.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
+ax2.set_title('Per-Pixel Loss')
+
+fig.colorbar(im, ax=[ax1, ax2], label='Per-Pixel Loss', fraction=0.015, pad=0.04)
+plt.subplots_adjust(right=0.85)
+
 plt.show()
-
-
-
-
