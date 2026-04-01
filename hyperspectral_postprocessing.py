@@ -1,5 +1,6 @@
 import scipy.io
 from scipy.io import loadmat
+from scipy.stats import multivariate_normal
 #import kneed as kn
 #import torch
 import matplotlib.pyplot as plt
@@ -98,25 +99,21 @@ plt.title('UMAP embedding of Bottleneck features')
 
 ################ Expectation ################
 
-# Cluster Weights
-w_pi = np.random.random(gt_classnum)
-w_pi /= w_pi.sum()
+# Initializing model parameters
 
 # Covariance matrix from mean-centered data
 # n = number of pixels, d = number of dimensions
 n,d = bottleneck.shape[0], bottleneck.shape[1]
 
-# Constructing mean-centered feature matrix
-# Then the covariance matrix
-# 7138 x 10
-Xb = np.zeros((n,d))
-for i in range(d):
-    Xb[:,i] = bottleneck[:,i] - np.mean(bottleneck[:,i])
-cov = Xb.T @ Xb / n
+# Initiate random cluster Weights
+# (7,)
+w_pi = np.random.random(gt_classnum)
+w_pi /= w_pi.sum()
 
 # 7138 x 10
 b = bottleneck
 
+# Initiate mean vectors using FPS
 mu_init = []
 ri = np.random.randint(1,n)
 vec = b[ri,:]
@@ -141,6 +138,25 @@ for i in range(1, gt_classnum):
 
 # 7 x 10
 mu_init = np.asarray(mu_init)
+
+# Constructing mean-centered feature matrix
+# Initial cov matrix is the same for every initial mean vector
+# 7138 x 10
+Xb = np.zeros((n,d))
+for i in range(d):
+    Xb[:,i] = bottleneck[:,i] - np.mean(bottleneck[:,i])
+# 10 x 10
+covariance = Xb.T @ Xb / n
+
+# Bottleneck : 7138 x 10
+# w_pi : (7,)
+# mu_init : 7 x 10
+# covariance : 10 x 10
+
+posterior = np.zeros((n,gt_classnum))       # 7138 x 7 (one probability per pixel per cluster)
+for k in range(gt_classnum):
+    posterior[:,k] = w_pi[k] * multivariate_normal.pdf(bottleneck,mu_init[k,:], covariance)
+
 
 ################ Maximization ################
 
