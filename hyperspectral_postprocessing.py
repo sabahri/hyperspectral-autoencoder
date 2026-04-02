@@ -186,6 +186,41 @@ while np.abs(LL_new - LL_old) > epsilon:
     LL_old = LL_new
     assign, LL_new, w_pi, mu, covariance = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)
 
+#############################################
+############# KMC on Bottleneck #############
+#############################################
+
+def kmc(means, bneck, classes):
+    # means : 7 x 10
+    dis_list = []
+    for k in range(classes):
+        # 7138 x 10
+        diff = bneck - means[k,:]
+        # 7138 x 1
+        dist_list.append(np.linalg.norm(diff, axis=0,keepdims=True))
+
+    # 7 x 7138 x 1
+    dist_array = np.stack(dist_list, axis=0)
+    # 7138 x 1, each row indexes crop classes 0 to 6
+    closest_mean = np.argmin(dist_array, axis=0, keepdims=True)
+    closest_count = np.unique(closest_mean)
+
+    # 7 x 10
+    mu = np.zeros((means.shape[0], means.shape[1]))
+    for k in range(classes):
+        mu[k,:] += bneck[closest_mean == k]
+    
+    ########### Need to return assignments as well!!!!!
+
+    # average
+    mu = mu / closest_count
+    return(mu)
+
+mu = kmc(mu_init, bottleneck, gt_classnum)
+for i in range(10):
+    mu = kmc(mu, bottleneck, gt_classnum)
+
+
 ###############################################
 ############# Visualizing Results #############
 ###############################################
