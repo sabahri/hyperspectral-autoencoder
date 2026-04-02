@@ -64,6 +64,10 @@ def tanh(x):
 	f = (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 	return(f)
 
+def tanh_der_post(x):
+	#f = tanh(x)
+	return(1 - x**2)
+
 ############################################
 ############# Loss Functions ###############
 ############################################
@@ -103,6 +107,12 @@ def weight_init_He(n,m):
 	w = np.random.normal(0,stdev,size=(n,m))
 	return(w)
 
+def activation(layer_ind, layer):
+	if layer_ind == 2:
+		return(tanh(layer), tanh_der_post(layer))
+	else:
+		return(relu(layer), relu_der(layer))	
+
 def forward_pass(W,b,data_array):
 	num_examples = data_array.shape[0]
 	channels = data_array.shape[1]
@@ -111,7 +121,7 @@ def forward_pass(W,b,data_array):
 	layer1 = relu(data_array @ W[0] + b[0])
 	layer2 = relu(layer1 @ W[1] + b[1])
 	# Bottleneck layer
-	layer3 = relu(layer2 @ W[2] + b[2])
+	layer3 = tanh(layer2 @ W[2] + b[2])
 
 	# Decoder
 	layer4 = relu(layer3 @ W[3] + b[3])
@@ -120,7 +130,7 @@ def forward_pass(W,b,data_array):
 	# Reconstructed layer, no activation (linear output)
 	layer6 = layer5 @ W[5] + b[5]
 
-	# List of layers
+	# List of post-activation layers
 	layer_list = [data_array, layer1, layer2, layer3, layer4, layer5, layer6]
 
 	# Cost function
@@ -150,8 +160,8 @@ def update_params(W, b, layer, learning_rate, d_J, num_examples):
 
 	# Iterating from 4 to 0
 	for i in range(len(W) - 2, 0,-1):						# want start with w5 update, so W[4]
-		dz = np.multiply(dq, relu_der(layer[i+1]))			# Layer 5, 7138 x 64		
-
+		#dz = np.multiply(dq, relu_der(layer[i+1]))			# Layer 5, 7138 x 64		
+		dz = np.multiply(dq, activation(i, layer[i+1])[1])
 		# For the next iteration
 		dq = dz @ W[i].T  									# dq_4, 7138 x 16
 
@@ -212,9 +222,9 @@ pca_num = np.linspace(1, num_bands, num_bands)
 # the eigh fxn stores in order of increasing values
 # --> reversal in cumul should always be concave
 
+kl = kn.KneeLocator(pca_num, cumul, curve="concave", direction="increasing")
+kl.plot_knee()
 if __name__ == "__main__":
-	kl = kn.KneeLocator(pca_num, cumul, curve="concave", direction="increasing")
-	kl.plot_knee()
 	plt.axvline(x = kl.knee,  color='red', linestyle='--', 
 		label=f'Knee: {kl.knee:.2f} \n Explained Var:{100*cumul[int(kl.knee)]:.2f}%')
 	plt.xlabel('Principal Component Axis Number')

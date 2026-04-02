@@ -186,8 +186,6 @@ while np.abs(LL_new - LL_old) > epsilon:
     LL_old = LL_new
     assign, LL_new, w_pi, mu, covariance = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)
 
-print(w_pi)
-print(np.unique(assign, return_counts=True))
 ###############################################
 ############# Visualizing Results #############
 ###############################################
