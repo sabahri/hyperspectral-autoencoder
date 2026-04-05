@@ -203,17 +203,19 @@ def kmc(means, bneck, classes):
     dist_array = np.stack(dist_list, axis=0)
     # 7138 x 1, each row indexes crop classes 0 to 6
     closest_mean = np.argmin(dist_array, axis=0, keepdims=True)
+    # 7138 x 1
     closest_count = np.unique(closest_mean)
 
     # 7 x 10
     mu = np.zeros((means.shape[0], means.shape[1]))
     for k in range(classes):
-        mu[k,:] += bneck[closest_mean == k]
+        # 1 x 10
+        mu[k,:] = np.sum(bneck[closest_mean == k,:])[None,:]
     
     ########### Need to return assignments as well!!!!!
-
-    # average
+    
     mu = mu / closest_count
+
     return(mu)
 
 mu = kmc(mu_init, bottleneck, gt_classnum)
