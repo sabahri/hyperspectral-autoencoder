@@ -72,16 +72,17 @@ w_pi_init = np.random.random(gt_classnum)
 w_pi_init /= w_pi_init.sum()
 
 # 7138 x 10
-b = bottleneck
+bott = bottleneck
 
 np.random.seed(42)
 # Initiate mean vectors using FPS
 mu_init = []
 ri = np.random.randint(1,n)
-vec = b[ri,:]
+vec = bott[ri,:]
 mu_init.append(vec)
+
 # 7137 x 10
-b = np.delete(b, ri, 0)
+bott = np.delete(bott, ri, 0)
 
 # Farthest Point Sampling
 for i in range(1, gt_classnum):
@@ -89,14 +90,14 @@ for i in range(1, gt_classnum):
     # Parse through current mu vectors
     for j in range(len(mu_init)):
         # subtract mu vector from remaining bottleneck vectors
-        dist.append(np.linalg.norm(b - mu_init[j], axis = 1))
+        dist.append(np.linalg.norm(bott - mu_init[j], axis = 1))
     dist = np.vstack(dist)
 
     min_dist = np.min(dist,axis=0)
     new_mu_ind = np.argmax(min_dist)
-    mu_init.append(b[new_mu_ind])
+    mu_init.append(bott[new_mu_ind])
 
-    b = np.delete(b, new_mu_ind, 0)
+    bott = np.delete(bott, new_mu_ind, 0)
 
 # 7 x 10
 mu_init = np.asarray(mu_init)
@@ -177,51 +178,52 @@ def expect_max(weights, means, covs, bneck, classnum):
 # Running GMM
 
 epsilon = 10**-3
-assign, LL_old, w_pi, mu, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
-LL_new = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)[1]
+assign_gmm, LL_old, w_pi, mu_gmm, covariance = expect_max(w_pi_init, mu_init, cov_init, bottleneck, gt_classnum)
+LL_new = expect_max(w_pi,mu_gmm, covariance, bottleneck, gt_classnum)[1]
 epoch = 1
 
 while np.abs(LL_new - LL_old) > epsilon:
     epoch +=1
     LL_old = LL_new
-    assign, LL_new, w_pi, mu, covariance = expect_max(w_pi,mu, covariance, bottleneck, gt_classnum)
+    assign_gmm, LL_new, w_pi, mu_gmm, covariance = expect_max(w_pi,mu_gmm, covariance, bottleneck, gt_classnum)
 
-#############################################
+############################################
 ############# KMC on Bottleneck #############
 #############################################
 
 def kmc(means, bneck, classes):
     # means : 7 x 10
-    dis_list = []
+    dist_list = []
     for k in range(classes):
         # 7138 x 10
-        diff = bneck - means[k,:]
+        #print(means[k,:][None,:].shape)
+        diff = bneck - means[k,:][None,:]
         # 7138 x 1
-        dist_list.append(np.linalg.norm(diff, axis=0,keepdims=True))
+        diff_norm = np.linalg.norm(diff, axis=1,keepdims=True)
+        # length 7, with 7138 x 1 components
+        dist_list.append(diff_norm)
 
-    # 7 x 7138 x 1
-    dist_array = np.stack(dist_list, axis=0)
-    # 7138 x 1, each row indexes crop classes 0 to 6
-    closest_mean = np.argmin(dist_array, axis=0, keepdims=True)
-    # 7138 x 1
-    closest_count = np.unique(closest_mean)
+    # 7138 x 7
+    dist_array = np.hstack(dist_list)
+
+    # 7138 x 1 each row indexes crop classes 0 to 6
+    label = np.argmin(dist_array, axis=1)
+    # 7 x 1
+    labels, counts = np.unique(label, return_counts=True)
 
     # 7 x 10
-    mu = np.zeros((means.shape[0], means.shape[1]))
+    new_mean = np.zeros((means.shape[0], means.shape[1]))
     for k in range(classes):
         # 1 x 10
-        mu[k,:] = np.sum(bneck[closest_mean == k,:])[None,:]
+        new_mean[k,:] = np.sum(bneck[label == k,:], axis=0)[None,:]
     
-    ########### Need to return assignments as well!!!!!
-    
-    mu = mu / closest_count
+    new_mean = new_mean / counts[:,None]
 
-    return(mu)
+    return(label, new_mean)
 
-mu = kmc(mu_init, bottleneck, gt_classnum)
+assign_kmc, mu_kmc = kmc(mu_init, bottleneck, gt_classnum)
 for i in range(10):
-    mu = kmc(mu, bottleneck, gt_classnum)
-
+    assign_kmc, mu_kmc = kmc(mu_kmc, bottleneck, gt_classnum)
 
 ###############################################
 ############# Visualizing Results #############
@@ -235,7 +237,8 @@ band_min = band.min()
 band_max = band.max()
 
 band_normalized = (band - band_min)/(band_max - band_min)
-assign_map = assign.reshape(data.shape[0], data.shape[1])
+assign_map_gmm = assign_gmm.reshape(data.shape[0], data.shape[1])
+assign_map_kmc = assign_kmc.reshape(data.shape[0], data.shape[1])
 
 # Un-normalizing the output
 #recon = np.multiply(output, stdev) + mean
@@ -251,16 +254,20 @@ p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
 
 p_loss = p_loss.reshape(data.shape[0], data.shape[1])
 
-fig, (ax1, ax2) = plt.subplots(1, 2)
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
-ax1.imshow(assign_map, cmap=cmap, vmin=0, vmax=1)
+ax1.imshow(assign_map_gmm, cmap=cmap, vmin=0, vmax=1)
 ax1.set_title('Band 100, GMM Mapping')
 ax1.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
 
-im = ax2.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
-ax2.set_title('Per-Pixel Loss')
+ax2.imshow(assign_map_kmc, cmap=cmap, vmin=0, vmax=1)
+ax2.set_title('Band 100, KMC Mapping')
+ax2.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
 
-fig.colorbar(im, ax=[ax1, ax2], label='Per-Pixel Loss', fraction=0.015, pad=0.04)
+im = ax3.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
+ax3.set_title('Per-Pixel Loss')
+
+fig.colorbar(im, ax=[ax1, ax2, ax3], label='Per-Pixel Loss', fraction=0.015, pad=0.04)
 plt.subplots_adjust(right=0.85)
 
 plt.show()
