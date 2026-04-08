@@ -256,18 +256,33 @@ p_loss = p_loss.reshape(data.shape[0], data.shape[1])
 
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
-ax1.imshow(assign_map_gmm, cmap=cmap, vmin=0, vmax=1)
-ax1.set_title('Band 100, GMM Mapping')
-ax1.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+ax1.imshow(assign_map_kmc, cmap=cmap, vmin=0, vmax=gt_classnum-1)
+ax1.set_title('Band 100, KMC Mapping')
 
-ax2.imshow(assign_map_kmc, cmap=cmap, vmin=0, vmax=1)
-ax2.set_title('Band 100, KMC Mapping')
-ax2.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+ax2.imshow(assign_map_gmm, cmap=cmap, vmin=0, vmax=gt_classnum-1)
+ax2.set_title('Band 100, GMM Mapping')
 
 im = ax3.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
 ax3.set_title('Per-Pixel Loss')
 
-fig.colorbar(im, ax=[ax1, ax2, ax3], label='Per-Pixel Loss', fraction=0.015, pad=0.04)
-plt.subplots_adjust(right=0.85)
+fig.colorbar(im, ax=ax3, label='Per-Pixel Loss', fraction=0.03, pad=0.04)
+plt.subplots_adjust(bottom=0.15)
+fig.legend(handles=handles, loc='lower center', ncol=4, bbox_to_anchor=(0.5, 0.01))
+plt.tight_layout
+
+####################################################
+############# More Bottleneck Analysis #############
+####################################################
+
+fig, axes = plt.subplots(2, 5, figsize=(15, 6))
+axes = axes.flatten()
+
+for i in range(d):
+    axes[i].hist(bottleneck[:, i], bins=50, range=(-1, 1), color='#414fc8')
+    axes[i].set_title(f'Dim {i}')
+    axes[i].set_xlim(-1, 1)
+
+plt.suptitle('Per-dimension bottleneck activation histograms')
+plt.tight_layout()
 
 plt.show()
