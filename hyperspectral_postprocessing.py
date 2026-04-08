@@ -61,6 +61,7 @@ plt.title('UMAP embedding of Bottleneck features')
 #############################################
 ############# GMM on Bottleneck #############
 #############################################
+np.random.seed(42)
 
 # Initializing model parameters
 
@@ -76,7 +77,6 @@ w_pi_init /= w_pi_init.sum()
 # 7138 x 10
 bott = bottleneck
 
-np.random.seed(42)
 # Initiate mean vectors using FPS
 mu_init = []
 ri = np.random.randint(1,n)
@@ -103,6 +103,7 @@ for i in range(1, gt_classnum):
 
 # 7 x 10
 mu_init = np.asarray(mu_init)
+mu_init_copy = mu_init.copy()
 
 # Constructing mean-centered feature matrix
 # Initial cov matrix is the same for every initial mean vector
@@ -216,7 +217,7 @@ def kmc(means, bneck, classes):
 
     return(label, new_mean)
 
-assign_kmc, mu_kmc = kmc(mu_init, bottleneck, gt_classnum)
+assign_kmc, mu_kmc = kmc(mu_init_copy, bottleneck, gt_classnum)
 for i in range(10):
     assign_kmc, mu_kmc = kmc(mu_kmc, bottleneck, gt_classnum)
 
@@ -225,21 +226,33 @@ for i in range(10):
 ###############################################
 
 # Constructing confusion matrix
-# Rows represent GT labels, Columns represent cluster assignment
+# Columns represent GT labels, Rows represent cluster assignment
 # Each entry = num pixels
 conf_kmc = np.zeros((gt_classnum, gt_classnum))
 conf_gmm = np.zeros((gt_classnum, gt_classnum))
 
-# recoded = np.searchsorted(unique_labels,ground_truth_flat)
 for p in range(n):
-    for i,j in itertools.product(range(gt_classnum), range(gt_classnum)):
-        if assign_kmc[p] == i and recoded[p] == j:
-            conf_kmc[i,j] += 1
-        if assign_gmm[p] == i and recoded[p] == j:
-            conf_gmm[i,j] += 1
+    conf_kmc[recoded[p], assign_kmc[p]] += 1
+    conf_gmm[recoded[p], assign_gmm[p]] += 1
 
 row_ind_kmc, col_ind_kmc = linear_sum_assignment(-conf_kmc)
 row_ind_gmm, col_ind_gmm = linear_sum_assignment(-conf_gmm)
+
+# Remap pixels from clustering assignment to ground truth assignment
+def remap(labels, pixels, col_ind, classes):
+    new_assignment = np.zeros((pixels, 1))
+    new_map = np.zeros((classes,))
+
+    for i in range(classes):
+        new_map[col_ind[i]] = i
+
+    for j in range(pixels):
+        new_assignment[j] = new_map[labels[j]]
+
+    return(new_assignment)
+
+assign_kmc = remap(assign_kmc, n, col_ind_kmc, gt_classnum)
+assign_gmm = remap(assign_gmm, n, col_ind_gmm, gt_classnum)
 
 ###############################################
 ############# Visualizing Results #############
