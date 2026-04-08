@@ -3,6 +3,7 @@
 import scipy.io
 from scipy.io import loadmat
 from scipy.stats import multivariate_normal
+from scipy.optimize import linear_sum_assignment
 #import kneed as kn
 #import torch
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import sys
+import itertools
 import umap
 
 import hyperspectral_functions as hf
@@ -132,13 +134,7 @@ def expect_max(weights, means, covs, bneck, classnum):
     # expectation
     for k in range(classnum):
         # 7138 x 1
-        #posterior[:,k] = weights[k] * multivariate_normal.pdf(bneck, means[k,:], covs[k,:,:])
         log_post[:,k] = np.log(weights[k]) + multivariate_normal.logpdf(bneck, means[k,:], covs[k,:,:])
-
-    # normalizing posterior for each pixel across all clusters:
-    # (7138,)
-    #post_sum = np.sum(posterior, axis=1)[:,None]
-    #log_like = np.sum(np.log(post_sum))
 
     # log-sum-exp trick
     # 7138 x 1
@@ -151,7 +147,6 @@ def expect_max(weights, means, covs, bneck, classnum):
     log_like = np.sum(log_post_sum)
 
     # 7138 x 7
-    #post_norm = posterior / post_sum
     post_norm = np.exp(log_post - log_post_sum)
     label = np.argmax(post_norm, axis=1)
 
@@ -226,6 +221,27 @@ for i in range(10):
     assign_kmc, mu_kmc = kmc(mu_kmc, bottleneck, gt_classnum)
 
 ###############################################
+############# Hungarian Algorithm #############
+###############################################
+
+# Constructing confusion matrix
+# Rows represent GT labels, Columns represent cluster assignment
+# Each entry = num pixels
+conf_kmc = np.zeros((gt_classnum, gt_classnum))
+conf_gmm = np.zeros((gt_classnum, gt_classnum))
+
+# recoded = np.searchsorted(unique_labels,ground_truth_flat)
+for p in range(n):
+    for i,j in itertools.product(range(gt_classnum), range(gt_classnum)):
+        if assign_kmc[p] == i and recoded[p] == j:
+            conf_kmc[i,j] += 1
+        if assign_gmm[p] == i and recoded[p] == j:
+            conf_gmm[i,j] += 1
+
+row_ind_kmc, col_ind_kmc = linear_sum_assignment(-conf_kmc)
+row_ind_gmm, col_ind_gmm = linear_sum_assignment(-conf_gmm)
+
+###############################################
 ############# Visualizing Results #############
 ###############################################
 
@@ -254,6 +270,12 @@ p_loss = (p_loss - p_loss.min()) / (p_loss.max() - p_loss.min())
 
 p_loss = p_loss.reshape(data.shape[0], data.shape[1])
 
+fig_loss, ax_loss = plt.subplots(figsize=(5, 5))
+im = ax_loss.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
+ax_loss.set_title('Per-Pixel Loss')
+fig_loss.colorbar(im, ax=ax_loss, label='Per-Pixel Loss', fraction=0.03, pad=0.04)
+plt.tight_layout()
+
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
 ax1.imshow(assign_map_kmc, cmap=cmap, vmin=0, vmax=gt_classnum-1)
@@ -262,10 +284,10 @@ ax1.set_title('Band 100, KMC Mapping')
 ax2.imshow(assign_map_gmm, cmap=cmap, vmin=0, vmax=gt_classnum-1)
 ax2.set_title('Band 100, GMM Mapping')
 
-im = ax3.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
-ax3.set_title('Per-Pixel Loss')
+gt_map = recoded.reshape(data.shape[0], data.shape[1])
+ax3.imshow(gt_map, cmap=cmap, vmin=0, vmax=gt_classnum-1)
+ax3.set_title('Ground Truth')
 
-fig.colorbar(im, ax=ax3, label='Per-Pixel Loss', fraction=0.03, pad=0.04)
 plt.subplots_adjust(bottom=0.15)
 fig.legend(handles=handles, loc='lower center', ncol=4, bbox_to_anchor=(0.5, 0.01))
 plt.tight_layout
