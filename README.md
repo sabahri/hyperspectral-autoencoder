@@ -35,3 +35,7 @@ Finally, postprocessing shows the following:
 
 <img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/remapped_4.png">
 
+This bottleneck analysis shows that even though the per-pixel-loss condition shown above is achieved effectively, MSE loss did not ensure that the path the network chose through the given node constraints is particularly efficient. In fact, per-dimension activation histograms show that roughly 30% bottleneck vectors are carrying most of the structural information (dimensions 3, 5, 7) while about 20% are pushed towards the asymptotic edges relative to the tanh activation for the bottleneck layer (dims 1, 8), and the majority are soft-saturated somewhere in between:
+
+<img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/histograms.png">
+
