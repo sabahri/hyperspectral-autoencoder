@@ -30,3 +30,8 @@ Finally, postprocessing shows the following:
 (2) UMAP projection of the bottleneck layer colored by ground truth, showing that the network is able to preserve clustering information regarding detecting pixel types in the data, largely aligning with crop type and growth stage.
 
 <img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/UMAP.png" />
+
+(3) Finally, I used both K-means-based and Gaussian Mixture Model-based clustering to see whether the bottleneck accurately preserves geospectral signatures according to crop class. Here, it is again colored according to ground truth. The K-means and GMM clustering were calibrated to the ground truth according the Hungarian Algorithm to ensure that the color-labels correspond to the same classes.
+
+<img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/remapped_4.png">
+

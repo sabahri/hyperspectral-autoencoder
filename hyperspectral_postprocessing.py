@@ -226,7 +226,7 @@ for i in range(10):
 ###############################################
 
 # Constructing confusion matrix
-# Columns represent GT labels, Rows represent cluster assignment
+# Rows represent GT labels, Columns represent cluster assignment
 # Each entry = num pixels
 conf_kmc = np.zeros((gt_classnum, gt_classnum))
 conf_gmm = np.zeros((gt_classnum, gt_classnum))
