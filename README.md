@@ -13,9 +13,13 @@ https://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes
 My aim was to build a self-supervised autoencoder for remote sensing, and to explore the variables that are important in general to decoding hyperspectral data in Earth Observation / Remote Sensing.
 
 # 2. Architecture
-The autoencoder breaks down the z-normalized input data from 204 to 10 dimensions (input -> decoder -> bottleneck) and then assesses the quality of the learned bottleneck layer by reconstructing the original data (bottleneck -> encoder -> output). Each hidden layer was ReLU-activated. The weights and biases were optimized via batch gradient descent, minimizing the cost based on mean-squared error between the input and output layers.
+The autoencoder breaks down the z-normalized input data from 204 to 10 dimensions (input -> decoder -> bottleneck) and then assesses the quality of the learned bottleneck layer by reconstructing the original data (bottleneck -> encoder -> output). Each hidden layer was ReLU-activated except for the bottleneck, which was tanh-activated. The weights and biases were optimized via batch gradient descent, minimizing the cost based on mean-squared error between the input and output layers.
 
 <img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/hyperspectral_autoencoder_nn_diagram_v8.svg" />
+
+To choose an appropriate dimensionality for the bottleneck layer, I implemented principal component analysis on the z-scored input data to find the intrinsic dimensionality of its linear structure. I used the Kneedle algorithm to assess the location of the elbow of the cumulative explained variance curve, which occured at about 10 components. This provides an upper bound for how many bottleneck dimensions are required for my non-linear network archiecture.
+
+NOTE: my original bottleneck layer had 8 dimensions with ReLu activation. I ran a coarse gradient descent run for learning rate optimization with this architecture, and later changed it to 10 dimensions with tanh activation. This is because of some further analysis I carried on later to probe the architecture's latent space. I did not however reoptimize the learning rate, which in principle would be impacted by these changes. Given that I need to further change the network architecture to become variational anyway, I won't bother reoptimizing until that's done.
 
 # 3. Script Summary
 
@@ -39,3 +43,4 @@ This bottleneck analysis shows that even though the per-pixel-loss condition sho
 
 <img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/histograms.png">
 
+So, as it stands, either the PCA analysis 
