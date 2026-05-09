@@ -17,6 +17,9 @@ import umap
 import hyperspectral_functions as hf
 from hyperspectral_functions import data_z_reshaped
 
+plt.rcParams.update({'font.size': 14})
+
+
 data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
 ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
 ground_truth_flat = ground_truth.reshape(ground_truth.shape[0]*ground_truth.shape[1],)
@@ -289,7 +292,7 @@ ax_loss.set_title('Per-Pixel Loss')
 fig_loss.colorbar(im, ax=ax_loss, label='Per-Pixel Loss', fraction=0.03, pad=0.04)
 plt.tight_layout()
 
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18,6))
 
 ax1.imshow(assign_map_kmc, cmap=cmap, vmin=0, vmax=gt_classnum-1)
 ax1.set_title('Band 100, KMC Mapping')
