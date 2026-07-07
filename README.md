@@ -43,4 +43,8 @@ This bottleneck analysis shows that even though the per-pixel-loss condition sho
 
 <img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/histograms.png">
 
-So, as it stands, it is unlikely that this neural network architecture will generalize well to other datasets. For the next step, I will instead make the autoencoder variational to push the network into using the latent space in a more structured way.
+So, as it stands, it is unlikely that this neural network architecture will generalize well to other datasets. For the next step, I will instead make the autoencoder variational to push the network into using the latent space in a more structured way. This leads me to my "Future" (now) work of turning this into a Variational autoencoder.
+
+# 4. The Next Step
+
+Turning my relatively simple MLP into a Variational autoencoder is motivated by the fact that, with its current construction, the relatively simple MLP neural network prioritizes minimizing the reconstructive loss function to optimize the model parameters. Taking a deep-dive into what the latent-space looks like, we can (crudely) see that there is some clustering structure there that the model captures. However, several Bottleneck neurons are not adequately capturing any latent space structure. Implementing Bayesian inference on the latent space would therefore reward Bottleneck efficiency over what in this case turned out to be a relatively cosmetic MLE optimization.
