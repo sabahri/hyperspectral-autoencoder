@@ -27,6 +27,9 @@ class Layer:
     
     def get_params(self) -> None:
         pass
+    
+    # def is_bneck(self, b_neck: None, self.x: np.array) -> None:
+    #     pass
 
 class Linear(Layer):
     # i : input dimension index
@@ -60,8 +63,26 @@ class Linear(Layer):
         self.w -= learn_rate * self.dw 
         self.b -= learn_rate * self.db
     
-    def get_params(self, learn_rate:float) -> None:
+    def get_params(self) -> None:
         return(self.w, self.b)
+
+
+class lin_act(Layer):
+    def forward_pass(self, x:np.ndarray) -> np.ndarray:
+        self.x = x
+        self.out = x
+        return(self.out)
+    
+    def backprop(self, dq:np.ndarray) -> np.ndarray:
+        dz = dq
+        return(dz)
+    
+    # def is_bneck(self, b_neck:None, x:np.array) -> None:
+    #     if b_neck == True:
+    #         bottleneck = self.forward_pass(self.out)
+    #     return(bottleneck)
+        
+
 
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
@@ -74,6 +95,11 @@ class ReLU(Layer):
         dz = dq * (self.x > 0)
         return(dz)
 
+    # def is_bneck(self, b_neck:None, x:np.array) -> None:
+    #     if b_neck == True:
+    #         bottleneck = self.forward_pass(self.out)
+    #     return(bottleneck)
+
 class Tanh(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
         self.x = x
@@ -83,6 +109,11 @@ class Tanh(Layer):
     def backprop(self, dq:np.ndarray) -> np.ndarray:
         dz = dq * (1 - self.out**2)
         return(dz)
+
+    # def is_bneck(self, b_neck:None, x:np.array) -> None:
+    #     if b_neck == True:
+    #         bottleneck = self.forward_pass(self.out)
+    #     return(bottleneck)
 
 # Defining Loss
 
@@ -121,18 +152,26 @@ class MSE(Loss):
 class MLP:
     # layers:list[Layer] # not inheriting from Layer; holding a compositional list of Layer objects
     # loss_fun: Loss # hold one loss-type object, no specificity
-    def __init__(self, layers:list[Layer], loss_fun: Loss, learn_rate: float) -> None:
+    def __init__(self, layers:list[Layer], b_neck:list, loss_fun: Loss, learn_rate: float) -> None:
         self.layers = layers
+        self.arch_len = len(layers)
         self.loss_fun = loss_fun
         self.learn_rate = learn_rate
+        self.b_neck = b_neck
 
     def __call__(self, x:np.ndarray) -> np.ndarray:
         return(self.forward_pass(x))
     
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
-        for layer in self.layers:
-            x = layer.forward_pass(x)
-        return(x)
+        for arch in range(self.arch_len):
+            x = layers[arch].forward_pass(x)
+            if b_neck[arch] == True:
+                bottleneck = x
+            else:
+                bottleneck = None
+        #for layer in self.layers:
+        #    x = layer.forward_pass(x)
+        return(x, bottleneck)
 
     def loss(self, x:np.ndarray, y: np.ndarray) -> float:
         return(self.loss_fun(y, x))
@@ -147,14 +186,14 @@ class MLP:
             layer.update_params(self.learn_rate)
     
     def train(self, x: np.ndarray, y: np.ndarray, epochs: int, cost_min: float) -> np.ndarray:
-        recon = self.forward_pass(x)
+        recon = self.forward_pass(x)[0]
         cost = self.loss(recon, x)
         cost_list = []
         epoch = 1
 
         while cost > cost_min:
             epoch += 1
-            recon = self.forward_pass(x)
+            recon = self.forward_pass(x)[0]
             cost = self.loss(recon, x)
             self.backprop()
             self.update_params()
@@ -164,33 +203,21 @@ class MLP:
         return(cost, cost_list, epoch)
 
     def save_params(self):
-        w_list = []
-        b_list = []
-        n = len(self.layers)
-        for layer in self.layers:
-            w_list.append(layer.w)
-            b_list.append(layer.b)
-        
-        np.savez('trained_model.npz', w_list, b_list)
-        
-        
+        w_dict = {}
+        b_dict = {}
+        n = 0
 
+        #for layer in self.layers:
+        for arch in range(self.arch_len):
+            layer = self.layers(arch)
+            weights_biases = layer.get_params()
+            if weights_biases != None:
+                w,b = weights_biases
+                w_dict[f"w{n}"] = w
+                b_dict[f"b{n}"] = b
+                n += 1
+            if b_neck[arch] == True:
+                bottleneck = layer
 
-'''
-        losses = np.empty(epochs)
-        for epoch in (pbar := trange(epochs)):
-            running_loss = 0.0
-            for i in range(0, len(x_train), batch_size):
-                x_batch = x_train[i:i + batch_size]
-                y_batch = y_train[i:i + batch_size]
+        np.savez('trained_model.npz', **w_dict, **b_dict, bottleneck=bottleneck)
 
-                pred = self.forward_pass(x_batch)
-                running_loss += self.loss(pred, y_batch) * batch_size 
-                self.backprop()
-                self.update_params()
-
-            running_loss /= len(x_train)
-            pbar.set_description(f"Loss: {running_loss:.3f}")
-            losses[epoch] = running_loss
-        return(losses)
-'''
