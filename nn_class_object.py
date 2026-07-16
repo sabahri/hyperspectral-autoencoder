@@ -82,8 +82,6 @@ class lin_act(Layer):
     #         bottleneck = self.forward_pass(self.out)
     #     return(bottleneck)
         
-
-
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
         self.x = x
@@ -164,12 +162,11 @@ class MLP:
     
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
         for arch in range(self.arch_len):
-            x = layers[arch].forward_pass(x)
-            if b_neck[arch] == True:
+            x = self.layers[arch].forward_pass(x)
+            if self.b_neck[arch] == True:
                 bottleneck = x
-            else:
-                bottleneck = None
-        #for layer in self.layers:
+
+        # for layer in self.layers:
         #    x = layer.forward_pass(x)
         return(x, bottleneck)
 
@@ -209,15 +206,15 @@ class MLP:
 
         #for layer in self.layers:
         for arch in range(self.arch_len):
-            layer = self.layers(arch)
+            layer = self.layers[arch]
             weights_biases = layer.get_params()
             if weights_biases != None:
                 w,b = weights_biases
                 w_dict[f"w{n}"] = w
                 b_dict[f"b{n}"] = b
                 n += 1
-            if b_neck[arch] == True:
-                bottleneck = layer
+            if self.b_neck[arch] == True:
+                bottleneck = self.forward_pass[1]
 
         np.savez('trained_model.npz', **w_dict, **b_dict, bottleneck=bottleneck)
 
