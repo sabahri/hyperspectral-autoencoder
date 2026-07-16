@@ -7,9 +7,7 @@ import matplotlib.cm as cm
 import numpy as np
 import sys
 
-#import hyperspectral_functions as hf
 import nn_class_object.py as hc
-#from hyperspectral_functions import kl
 from hyperspectral_functions import data_z_reshaped
 
 data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
