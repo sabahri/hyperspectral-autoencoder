@@ -49,7 +49,6 @@ b6 = np.zeros((1,num_bands))
 w_list = [w1, w2, w3, w4, w5, w6]	
 b_list = [b1, b2, b3, b4, b5, b6]
 
-
 output = hf.forward_pass(w_list, b_list, data_z_reshaped)[0]
 cost = hf.mse_cost(data_z_reshaped, output, num_pixels, num_bands)
 d_cost = hf.mse_der(data_z_reshaped, output, num_pixels, num_bands)

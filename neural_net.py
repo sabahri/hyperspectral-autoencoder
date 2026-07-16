@@ -124,7 +124,7 @@ class MSE(Loss):
         return(self.loss)
 
     def d_loss(self) -> np.ndarray:
-        return(2 * (self.recon - self.img) / len(self.img) #(self.img.size))
+        return(2 * (self.recon - self.img) / len(self.img)) #(self.img.size))
 
 # Multi-Layer Perceptron class
 # Specifies forward loss and backpropagation
@@ -166,6 +166,26 @@ class MLP:
         for layer in self.layers:
             layer.update_params(self.learn_rate)
     
+    def opt_lr(self, img: np.ndarray, epochs:int) -> np.ndarray:
+        cost_list = []
+
+        for j in range(epochs):
+
+            recon, bottleneck = self.forward_pass(img)
+            cost = self.loss(img, recon)
+            cost_list.append(cost)
+
+            self.backprop()
+            self.update_params()
+
+            print("Learning rate:", self.learn_rate)
+            print("Epoch:", j)
+            print("Cost:", cost)
+        
+       #print(len(cost_list))
+        return(np.asarray(cost_list))
+
+
     def train(self, img: np.ndarray, cost_min: float) -> np.ndarray:
         # img: input data
         epoch = 1
@@ -174,7 +194,8 @@ class MLP:
         cost_list = [cost]
 
         while cost > cost_min:
-            #print(epoch)
+            print("Epoch number:", epoch)
+            print("Cost:", cost)
             self.backprop()
             self.update_params()
 
