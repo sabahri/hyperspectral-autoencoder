@@ -76,14 +76,12 @@ layers = [nn.Linear(num_bands, 64), nn.ReLU(),
 		nn.Linear(64, num_bands)]
 num_layers = (len(layers) + 1) / 2
 loss_function = nn.MSE()
-n_network = nn.MLP(layers, bott_i, loss_function, lr[i])
-model = n_network.train(data_z_reshaped, cost_minimum)
-
+n_network = nn.MLP(layers, bott_i, loss_function, lr)
 costs, output, b_neck = n_network.train(data_z_reshaped, cost_minimum)
 saved_model = n_network.save_params()
 
 ##### GD Postmortem
-epoch = len(costs) + 1
+epoch = len(costs)
 epochs = np.linspace(1, epoch, epoch)
 
 fig, ax = plt.subplots()

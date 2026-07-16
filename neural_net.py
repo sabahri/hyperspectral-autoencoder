@@ -166,7 +166,7 @@ class MLP:
         for layer in self.layers:
             layer.update_params(self.learn_rate)
     
-    def opt_lr(self, img: np.ndarray, epochs:int) -> np.ndarray:-*
+    def opt_lr(self, img: np.ndarray, epochs:int) -> np.ndarray:
         cost_list = []
 
         for j in range(epochs):
@@ -184,7 +184,6 @@ class MLP:
         
        #print(len(cost_list))
         return(np.asarray(cost_list))
-
 
     def train(self, img: np.ndarray, cost_min: float) -> np.ndarray:
         # img: input data
