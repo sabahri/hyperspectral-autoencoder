@@ -65,7 +65,7 @@ class Linear(Layer):
         return(self.w, self.b)
 
 
-class lin_act(Layer):
+class Lin_act(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
         self.x = x
         self.out = x
