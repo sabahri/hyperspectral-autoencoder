@@ -52,8 +52,9 @@ class Linear(Layer):
         return(self.out)
 
     def backprop(self, dq: np.ndarray) -> np.ndarray:
-        self.dw = self.x.T @ dq / self.x.size
-        self.db = np.sum(dq, axis=0, keepdims=True) / self.x.size
+        # len(self.x) is the number of pixels in one channel
+        self.dw = self.x.T @ dq / len(self.x)
+        self.db = np.sum(dq, axis=0, keepdims=True) / len(self.x)
         dz = dq @ self.w.T
         return(dz)
 
@@ -173,8 +174,7 @@ class MLP:
         cost_list = [cost]
 
         while cost > cost_min:
-            epoch += 1
-
+            print(epoch)
             self.backprop()
             self.update_params()
 
@@ -182,6 +182,7 @@ class MLP:
             cost = self.loss(img, recon)
 
             cost_list.append(cost)
+            epoch += 1
         
         return(cost_list, recon, bottleneck)
 
