@@ -78,7 +78,10 @@ num_layers = (len(layers) + 1) / 2
 loss_function = nn.MSE()
 n_network = nn.MLP(layers, bott_i, loss_function, lr)
 costs, output, b_neck = n_network.train(data_z_reshaped, cost_minimum)
+
+# Saving values from trained model
 saved_model = n_network.save_params()
+bott_output = n_network.save_output(b_neck,output)
 
 ##### GD Postmortem
 epoch = len(costs)

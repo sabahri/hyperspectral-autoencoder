@@ -222,3 +222,5 @@ class MLP:
 
         np.savez('trained_model.npz', **w_dict, **b_dict) #, bottleneck=bottleneck, output=recon)
 
+    def save_output(self, bottleneck, recon):
+        np.savez('bott_output.npz', bottleneck=bottleneck, output=recon)
