@@ -60,62 +60,71 @@ bott_dim = int(kl.knee)
 print("Number of bottleneck dims:", bott_dim)
 ##### Gradient Descent
 
-# Learning Rate = 0.01 
-lr = 10.**-1
-
+# Learning Rate = 1.2
+lr = 1.2
 # Bottleneck index
 bott_i = 5
+cost_minimum = 0.3
 
-# Optimizing learning rate
-num_epochs = 500
-epochs = np.linspace(1,num_epochs,num_epochs)
+np.random.seed(42)
+# Desired neural network architecture, bottleneck is after Tanh
+layers = [nn.Linear(num_bands, 64), nn.ReLU(), 
+		nn.Linear(64, 16), nn.ReLU(), 
+		nn.Linear(16, bott_dim), nn.Tanh(), 
+		nn.Linear(bott_dim, 16), nn.ReLU(), 
+		nn.Linear(16,64), nn.ReLU(), 
+		nn.Linear(64, num_bands)]
+num_layers = (len(layers) + 1) / 2
+loss_function = nn.MSE()
+n_network = nn.MLP(layers, bott_i, loss_function, lr[i])
+model = n_network.train(data_z_reshaped, cost_minimum)
 
-# e = np.array((-5, -4, -3, -2, -1))
-# lr = 10.**e
-# num_rates = e.shape[0]
-l = np.array((15., 14., 13., 12., 11., 10., 9., 8.))
-lr = l**-1
-num_rates = lr.shape[0]
-costs = np.zeros((num_rates, num_epochs))
+costs, output, b_neck = n_network.train(data_z_reshaped, cost_minimum)
+saved_model = n_network.save_params()
 
-colors = cm.rainbow(np.linspace(0,1,num_rates))
+##### GD Postmortem
+epoch = len(costs) + 1
+epochs = np.linspace(1, epoch, epoch)
+
 fig, ax = plt.subplots()
 
-for i in range(num_rates):
-	np.random.seed(42)
-	# Desired neural network architecture, bottleneck is after Tanh
-	layers = [nn.Linear(num_bands, 64), nn.ReLU(), 
-			nn.Linear(64, 16), nn.ReLU(), 
-			nn.Linear(16, bott_dim), nn.Tanh(), 
-			nn.Linear(bott_dim, 16), nn.ReLU(), 
-			nn.Linear(16,64), nn.ReLU(), 
-			nn.Linear(64, num_bands)]
-	num_layers = (len(layers) + 1) / 2
-	loss_function = nn.MSE()
-	n_network = nn.MLP(layers, bott_i, loss_fun, lr[i])
-	costs[i,:] = n_network.opt_lr(data_z_reshaped, num_epochs)
-	ax.plot(epochs, costs[i,:], label=f"lr: {lr[i]:.0e}")
-
+ax.plot(epochs, np.asarray(costs))
 ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
 ax.grid()
-ax.legend()
 plt.show()
 
 
 
+##### Optimizing learning rate
+# num_epochs = 500
+# epochs = np.linspace(1,num_epochs,num_epochs)
 
-# # costs, output, b_neck = n_network.train(data_z_reshaped, cost_minimum)
-# # saved_model = n_network.save_params()
+# lr = np.array((1., 1.2, 1.4, 1.6, 1.8, 2.))
+# num_rates = lr.shape[0]
+# costs = np.zeros((num_rates, num_epochs))
 
-# ##### Postmortem
-
-# epoch = len(costs) + 1
-
-# epochs = np.linspace(1, epoch, epoch)
-
+# colors = cm.rainbow(np.linspace(0,1,num_rates))
 # fig, ax = plt.subplots()
 
-# ax.plot(epochs, np.asarray(costs))
+# for i in range(num_rates):
+# 	np.random.seed(42)
+# 	# Desired neural network architecture, bottleneck is after Tanh
+# 	layers = [nn.Linear(num_bands, 64), nn.ReLU(), 
+# 			nn.Linear(64, 16), nn.ReLU(), 
+# 			nn.Linear(16, bott_dim), nn.Tanh(), 
+# 			nn.Linear(bott_dim, 16), nn.ReLU(), 
+# 			nn.Linear(16,64), nn.ReLU(), 
+# 			nn.Linear(64, num_bands)]
+# 	num_layers = (len(layers) + 1) / 2
+# 	loss_function = nn.MSE()
+# 	n_network = nn.MLP(layers, bott_i, loss_function, lr[i])
+# 	costs[i,:] = n_network.opt_lr(data_z_reshaped, num_epochs)
+# 	ax.plot(epochs, costs[i,:], label=f"lr: {lr[i]:.2f}")
+
 # ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
 # ax.grid()
+# ax.legend()
 # plt.show()
+
+
+
