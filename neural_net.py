@@ -124,7 +124,7 @@ class MSE(Loss):
         return(self.loss)
 
     def d_loss(self) -> np.ndarray:
-        return(2 * (self.recon - self.img) / (self.img.size))
+        return(2 * (self.recon - self.img) / len(self.img) #(self.img.size))
 
 # Multi-Layer Perceptron class
 # Specifies forward loss and backpropagation
@@ -174,7 +174,7 @@ class MLP:
         cost_list = [cost]
 
         while cost > cost_min:
-            print(epoch)
+            #print(epoch)
             self.backprop()
             self.update_params()
 
