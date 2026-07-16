@@ -6,7 +6,7 @@ import matplotlib.cm as cm
 import numpy as np
 import sys
 
-import neural_net.py as nn
+import neural_net as nn
 
 ##### Data import and z-normalization
 
@@ -57,9 +57,8 @@ if __name__ == "__main__":
 	plt.pause(0.1)
 
 bott_dim = int(kl.knee)
-
+print("Number of bottleneck dims:", bott_dim)
 ##### Gradient Descent
-
 np.random.seed(42)
 
 lr = 10.**-2
@@ -71,44 +70,28 @@ layers = [nn.Linear(num_bands, 64), nn.ReLU(),
 			nn.Linear(bott_dim, 16), nn.ReLU(), 
 			nn.Linear(16,64), nn.ReLU(), 
 			nn.Linear(64, num_bands)]
+num_layers = (len(layers) + 1) / 2
 
 # Bottleneck index
 bott_i = 5
 
+loss_fun = nn.MSE()
+cost_minimum = 0.3 
 
+# Running the neural network
+n_network = nn.MLP(layers, bott_i, loss_fun, lr)
+costs, output, b_neck = n_network.train(data_z_reshaped, cost_minimum)
+saved_model = n_network.save_params()
 
-output = hf.forward_pass(w_list, b_list, data_z_reshaped)[0]
-cost = hf.mse_cost(data_z_reshaped, output, num_pixels, num_bands)
-d_cost = hf.mse_der(data_z_reshaped, output, num_pixels, num_bands)
-cost_list = [cost]
+##### Postmortem
 
-
-# Desired cost optimum given z-score normalization
-while cost > 0.3:
-	epoch += 1
-	output, l_list, cost = hf.forward_pass(w_list, b_list, data_z_reshaped)
-	d_cost = hf.mse_der(data_z_reshaped, output, num_pixels, num_bands)
-	w_list, b_list = hf.update_params(w_list, b_list, l_list, lr, d_cost, num_pixels)
-	cost_list.append(cost)
-	
-	# if epoch == 2001:
-	# 	print("Cost at epoch 2000:", cost)
-	# 	break
-
-l_list = hf.forward_pass(w_list,b_list,data_z_reshaped)[1]
-bottleneck = l_list[3]
-output = l_list[-1]
-
-np.savez('trained_model.npz',
-	w0=w_list[0], w1=w_list[1], w2=w_list[2], w3=w_list[3], w4=w_list[4], w5=w_list[5],
-    b0=b_list[0], b1=b_list[1], b2=b_list[2], b3=b_list[3], b4=b_list[4], b5=b_list[5],
-    bottleneck=bottleneck, output=output)
+epoch = len(costs) + 1
 
 epochs = np.linspace(1, epoch, epoch)
 
 fig, ax = plt.subplots()
 
-ax.plot(epochs, np.asarray(cost_list))
+ax.plot(epochs, np.asarray(costs))
 ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
 ax.grid()
 plt.show()

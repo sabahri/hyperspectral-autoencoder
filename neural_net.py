@@ -1,4 +1,4 @@
-
+import numpy as np
 # Defining Layers and Activation Functions
 
 class Layer:
@@ -6,7 +6,7 @@ class Layer:
     # x : input to layer
     # out : post-activation output
     def __init__(self):
-        self.targ=None
+        #self.targ=None
         self.x=None
         self.out=None
     
@@ -52,8 +52,8 @@ class Linear(Layer):
         return(self.out)
 
     def backprop(self, dq: np.ndarray) -> np.ndarray:
-        self.dw = self.x.T @ dq / self.targ.size
-        self.db = np.sum(dq, axis=0, keepdims=True) / self.targ.size
+        self.dw = self.x.T @ dq / self.x.size
+        self.db = np.sum(dq, axis=0, keepdims=True) / self.x.size
         dz = dq @ self.w.T
         return(dz)
 
@@ -65,15 +65,15 @@ class Linear(Layer):
         return(self.w, self.b)
 
 
-class Lin_act(Layer):
-    def forward_pass(self, x:np.ndarray) -> np.ndarray:
-        self.x = x
-        self.out = x
-        return(self.out)
+# class Lin_act(Layer):
+#     def forward_pass(self, x:np.ndarray) -> np.ndarray:
+#         self.x = x
+#         self.out = x
+#         return(self.out)
     
-    def backprop(self, dq:np.ndarray) -> np.ndarray:
-        dz = dq
-        return(dz)
+#     def backprop(self, dq:np.ndarray) -> np.ndarray:
+#         dz = dq
+#         return(dz)
     
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
@@ -133,12 +133,12 @@ class MSE(Loss):
 class MLP:
     # layers:list[Layer] # not inheriting from Layer; holding a compositional list of Layer objects
     # loss_fun: Loss # hold one loss-type object, no specificity
-    def __init__(self, layers:list[Layer], b_neck:int, loss_fun: Loss, learn_rate: float) -> None:
+    def __init__(self, layers:list[Layer], bneck_ind:int, loss_fun: Loss, learn_rate: float) -> None:
         self.layers = layers
         self.arch_len = len(layers)
         self.loss_fun = loss_fun
         self.learn_rate = learn_rate
-        self.b_neck = b_neck
+        self. bneck_ind =  bneck_ind
 
     def __call__(self, x:np.ndarray) -> np.ndarray:
         return(self.forward_pass(x))
@@ -147,7 +147,7 @@ class MLP:
         # x: input to layer
         for ind, layer in enumerate(self.layers):
             x = layer.forward_pass(x)
-            if ind == self.b_neck:
+            if ind == self.bneck_ind:
                 bottleneck = x
         return(x, bottleneck)
 
@@ -165,7 +165,7 @@ class MLP:
         for layer in self.layers:
             layer.update_params(self.learn_rate)
     
-    def train(self, img: np.ndarray, epochs: int, cost_min: float) -> np.ndarray:
+    def train(self, img: np.ndarray, cost_min: float) -> np.ndarray:
         # img: input data
         epoch = 1
         recon, bottleneck = self.forward_pass(img)
@@ -183,9 +183,10 @@ class MLP:
 
             cost_list.append(cost)
         
-        return(cost, cost_list, epoch, recon, bottleneck)
+        return(cost_list, recon, bottleneck)
 
-    def save_params(self, bottleneck, output):
+    #def save_params(self, bottleneck, recon, epoch, cost_list):
+    def save_params(self):
         w_dict = {}
         b_dict = {}
         n = 0
@@ -198,5 +199,5 @@ class MLP:
                 b_dict[f"b{n}"] = b
                 n += 1
 
-        np.savez('trained_model.npz', **w_dict, **b_dict, bottleneck=bottleneck, output=output)
+        np.savez('trained_model.npz', **w_dict, **b_dict) #, bottleneck=bottleneck, output=recon)
 
