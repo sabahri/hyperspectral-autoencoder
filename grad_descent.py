@@ -57,7 +57,9 @@ if __name__ == "__main__":
 	plt.pause(0.1)
 
 bott_dim = int(kl.knee)
-print("Number of bottleneck dims:", bott_dim)
+#print("Number of bottleneck dims:", bott_dim)
+
+
 ##### Gradient Descent
 
 # Learning Rate = 1.2

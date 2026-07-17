@@ -14,12 +14,9 @@ import sys
 import itertools
 import umap
 
-import hyperspectral_functions as hf
-from hyperspectral_functions import data_z_reshaped
-
 plt.rcParams.update({'font.size': 14})
 
-
+##### Loading data
 data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
 ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
 ground_truth_flat = ground_truth.reshape(ground_truth.shape[0]*ground_truth.shape[1],)
@@ -28,12 +25,36 @@ gt_classnum = len(unique_labels)
 
 recoded = np.searchsorted(unique_labels,ground_truth_flat)
 
-checkpoint = np.load('trained_model.npz')
+checkpoint1 = np.load('trained_model.npz')
+w_list = [checkpoint1[f'w{i}'] for i in range(6)]
+b_list = [checkpoint1[f'b{i}'] for i in range(6)]
 
-w_list = [checkpoint[f'w{i}'] for i in range(6)]
-b_list = [checkpoint[f'b{i}'] for i in range(6)]
-bottleneck = checkpoint['bottleneck']
-output = checkpoint['output']
+checkpoint2 = np.load('bott_output.npz')
+bottleneck = checkpoint2['bottleneck']
+output = checkpoint2['output']
+
+##### Repeat normalizing
+
+# SalinasA: 83 x 86 spatial grid
+# 204 channels
+num_pixels = data.shape[0] * data.shape[1]
+num_bands = data.shape[-1]
+
+# 7138 1x204-dim vectors
+data_reshaped = data.reshape(num_pixels, num_bands)
+
+# z-scoring
+# Normalize input so that the pixels of each band are centered on 0, with stdev = 1
+# --> A useless network will produce MSE loss ~ 1
+data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+epsilon = 10**-6
+
+for j in range(data.shape[-1]):
+	mean = np.mean(data[:,:,j])
+	std = np.std(data[:,:,j])
+	data_z[:,:,j] = (data[:,:,j] - mean) / (std + epsilon)		# add infinitesimal epsilon in case std = 0
+
+data_z_reshaped = data_z.reshape(num_pixels, num_bands)
 
 ################################
 ############# UMAP #############
@@ -276,7 +297,7 @@ assign_map_kmc = assign_kmc.reshape(data.shape[0], data.shape[1])
 #recon = np.multiply(output, stdev) + mean
 #recon = recon.reshape(data.shape[0], data.shape[1], data.shape[2])
 
-p_loss = hf.mse_pixel_loss(data_z_reshaped, output)
+p_loss = np.mean((output - data_z_reshaped)**2, axis=1)
 ploss_h = np.percentile(p_loss, 99)
 ploss_l = np.percentile(p_loss, 1)
 

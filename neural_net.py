@@ -177,10 +177,9 @@ class MLP:
 
             self.backprop()
             self.update_params()
-
-            print("Learning rate:", self.learn_rate)
-            print("Epoch:", j)
-            print("Cost:", cost)
+            # print("Learning rate:", self.learn_rate)
+            # print("Epoch:", j)
+            # print("Cost:", cost)
         
        #print(len(cost_list))
         return(np.asarray(cost_list))
@@ -193,8 +192,8 @@ class MLP:
         cost_list = [cost]
 
         while cost > cost_min:
-            print("Epoch number:", epoch)
-            print("Cost:", cost)
+            # print("Epoch number:", epoch)
+            # print("Cost:", cost)
             self.backprop()
             self.update_params()
 
