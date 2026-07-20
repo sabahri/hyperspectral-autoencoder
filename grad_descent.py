@@ -72,7 +72,8 @@ np.random.seed(42)
 # Desired neural network architecture, bottleneck is after Tanh
 layers = [nn.Linear(num_bands, 64), nn.ReLU(), 
 		nn.Linear(64, 16), nn.ReLU(), 
-		nn.Linear(16, bott_dim), nn.Tanh(), 
+#		nn.Linear(16, bott_dim), nn.Tanh(), 
+		nn.Variational(16, bott_dim),
 		nn.Linear(bott_dim, 16), nn.ReLU(), 
 		nn.Linear(16,64), nn.ReLU(), 
 		nn.Linear(64, num_bands)]

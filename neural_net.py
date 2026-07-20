@@ -1,4 +1,11 @@
+# Useful resources:
+# https://colab.research.google.com/github/SharifiZarchi/Introduction_to_Machine_Learning/blob/main/Jupyter_Notebooks/Chapter_03_Neural_Networks/NNs_from_scratch.ipynb#scrollTo=2qfmP-hYkpfz
+# https://maurocomi.com/blog/vae.html#step-2-the-latent-space
+
+
 import numpy as np
+import jax.numpy as jnp 
+from jax import grad
 # Defining Layers and Activation Functions
 
 class Layer:
@@ -65,17 +72,40 @@ class Linear(Layer):
     def get_params(self) -> None:
         return(self.w, self.b)
 
+class Variational(Layer):
+    def __init__(self, i: int, j: int):
+        super().__init__()
 
-# class Lin_act(Layer):
-#     def forward_pass(self, x:np.ndarray) -> np.ndarray:
-#         self.x = x
-#         self.out = x
-#         return(self.out)
-    
-#     def backprop(self, dq:np.ndarray) -> np.ndarray:
-#         dz = dq
-#         return(dz)
-    
+        # Weights
+        stdev = np.sqrt(2 / i)
+        self.w_mean = np.random.normal(0,stdev,size=(i,j))
+        self.w_std = np.random.normal(0,stdev,size=(i,j))
+        self.dw = np.zeros_like(self.w)
+
+        # Biases
+        self.b_mean = np.zeros((1, j))
+        self.b_std = np.zeros((1, j))
+        self.db = np.zeros_like(self.b)
+
+    def forward_pass(self, x:np.ndarray) -> np.ndarray:
+        self.mean = x @ self.w_mean + self.b_mean
+        self.std = np.log(1+np.exp(x @ self.w_std + self.b_std)) + 1e-6
+
+        self.out = self.mean
+        return(self.out)
+
+    def reparametrization(self):
+        i,j = self.mean.shape()
+        self.eps_bott = np.random.normal(size=(i,j))
+        self.z = self.mean + self.std * self.eps_bott
+
+        return(self.z)
+
+    def kl_divergence(self):
+        kl = 0.5 * np.sum(self.mean**2 + np.exp(self.std) - np.log(self.std) - 1, axis=(-1,-2,-3))
+        return(kl)
+
+
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
         self.x = x
