@@ -80,30 +80,35 @@ class Variational(Layer):
         stdev = np.sqrt(2 / i)
         self.w_mean = np.random.normal(0,stdev,size=(i,j))
         self.w_std = np.random.normal(0,stdev,size=(i,j))
-        self.dw = np.zeros_like(self.w)
+        self.dw_mean = np.zeros_like(self.w_mean)
+        self.dw_std = np.zeros_like(self.w_std)
 
         # Biases
         self.b_mean = np.zeros((1, j))
         self.b_std = np.zeros((1, j))
-        self.db = np.zeros_like(self.b)
+        self.db_mean = np.zeros_like(self.b_mean)
+        self.db_std = np.zeros_like(self.b_std)
 
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
         self.mean = x @ self.w_mean + self.b_mean
         self.std = np.log(1+np.exp(x @ self.w_std + self.b_std)) + 1e-6
+        self.log_var = 2 * np.log(self.std)
 
         self.out = self.mean
         return(self.out)
 
     def reparametrization(self):
-        i,j = self.mean.shape()
+        i,j = self.mean.shape
         self.eps_bott = np.random.normal(size=(i,j))
         self.z = self.mean + self.std * self.eps_bott
 
         return(self.z)
 
     def kl_divergence(self):
-        kl = 0.5 * np.sum(self.mean**2 + np.exp(self.std) - np.log(self.std) - 1, axis=(-1,-2,-3))
-        return(kl)
+        self.kl = np.mean(0.5 * np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
+    
+    def backprop(self, beta:int):
+        return(jax.grad(beta * self.kl))
 
 
 class ReLU(Layer):
