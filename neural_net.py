@@ -1,6 +1,8 @@
 # Useful resources:
 # https://colab.research.google.com/github/SharifiZarchi/Introduction_to_Machine_Learning/blob/main/Jupyter_Notebooks/Chapter_03_Neural_Networks/NNs_from_scratch.ipynb#scrollTo=2qfmP-hYkpfz
 # https://maurocomi.com/blog/vae.html#step-2-the-latent-space
+# https://github.com/paulperet/variational-autoencoder-from-scratch
+# https://naresh-ub.github.io/guest_lectures/spring_2026/vae.html
 
 
 import numpy as np
@@ -73,43 +75,76 @@ class Linear(Layer):
         return(self.w, self.b)
 
 class Variational(Layer):
+    # i : input dimension index
+    # j : output dimension index (i + 1)
     def __init__(self, i: int, j: int):
         super().__init__()
 
         # Weights
         stdev = np.sqrt(2 / i)
         self.w_mean = np.random.normal(0,stdev,size=(i,j))
-        self.w_std = np.random.normal(0,stdev,size=(i,j))
         self.dw_mean = np.zeros_like(self.w_mean)
+
+        self.w_std = np.random.normal(0,stdev,size=(i,j))
         self.dw_std = np.zeros_like(self.w_std)
 
         # Biases
         self.b_mean = np.zeros((1, j))
-        self.b_std = np.zeros((1, j))
         self.db_mean = np.zeros_like(self.b_mean)
+
+        self.b_std = np.zeros((1, j))
         self.db_std = np.zeros_like(self.b_std)
 
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
-        self.mean = x @ self.w_mean + self.b_mean
-        self.std = np.log(1+np.exp(x @ self.w_std + self.b_std)) + 1e-6
+        self.x = x
+        self.mean = self.x @ self.w_mean + self.b_mean
+
+        self.s = self.x @ self.w_std + self.b_std
+        self.A = 1 + np.exp(self.s)
+
+        self.std = np.log(self.A) + 1e-6
         self.log_var = 2 * np.log(self.std)
 
-        self.out = self.mean
+        # Generate epsilon for bottleneck and return sampled latent vector
+        self.out = self.reparametrization()
+
         return(self.out)
 
     def reparametrization(self):
         i,j = self.mean.shape
+        # Epsilon for bottleneck, Gaussian about 0
         self.eps_bott = np.random.normal(size=(i,j))
-        self.z = self.mean + self.std * self.eps_bott
+        # Sampling latent vector from Gaussian distribution about mean
+        self.latvec = self.mean + self.std * self.eps_bott
 
-        return(self.z)
+        return(self.latvec)
 
     def kl_divergence(self):
-        self.kl = np.mean(0.5 * np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
-    
-    def backprop(self, beta:int):
-        return(jax.grad(beta * self.kl))
+        self.kl = 0.5 * np.mean(np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
 
+    def backprop(self, dq: np.ndarray):
+        self.dw_mean = self.x.T @ dq / len(self.x)
+        self.db_mean = np.sum(dq, axis=0, keepdims=True) / len(self.x)
+
+        # From before: self.A = 1 + np.exp(self.x @ self.w_std + self.b_std)
+        dL_ds = dq * self.eps_bott * (self.A - 1) / self.A        
+        self.dw_std = self.x.T @ dL_ds / len(self.x)
+        self.db_std = np.sum(dL_ds, axis=0, keepdims=True) / len(self.x)
+
+        # Mean part and Standard Dev part jointly contributing to the gradient
+        dz = (dq @ self.w_mean.T) + (dL_ds @ self.w_std.T)
+
+        return(dz)
+
+    def update_params(self):
+        self.w_mean = learn_rate * self.dw_mean 
+        self.b_mean = learn_rate * self.db_mean
+
+        self.w_std = learn_rate * self.dw_std
+        self.b_std = learn_rate * self.db_std
+
+    def get_params(self) -> None:
+        return(self.w_mean, self.b_mean, self.w_std, self.b_std)
 
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
