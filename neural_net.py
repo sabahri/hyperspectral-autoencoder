@@ -110,7 +110,7 @@ class Variational(Layer):
 
         return(self.out)
 
-    def reparametrization(self):
+    def reparametrization(self) -> np.ndarray:
         i,j = self.mean.shape
         # Epsilon for bottleneck, Gaussian about 0
         self.eps_bott = np.random.normal(size=(i,j))
@@ -119,8 +119,11 @@ class Variational(Layer):
 
         return(self.latvec)
 
-    def kl_divergence(self):
+    def kl_divergence(self, dq:np.ndarray) -> np.ndarray:
         self.kl = 0.5 * np.mean(np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
+
+        grad_kl_mean = dq + self.mean
+        grad_kl_std = dq * self.eps_bott + 0.5*(np.exp(self.log_var) - 1)
 
     def backprop(self, dq: np.ndarray):
         self.dw_mean = self.x.T @ dq / len(self.x)
@@ -145,6 +148,8 @@ class Variational(Layer):
 
     def get_params(self) -> None:
         return(self.w_mean, self.b_mean, self.w_std, self.b_std)
+
+
 
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
