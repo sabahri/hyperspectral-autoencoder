@@ -71,8 +71,8 @@ class Linear(Layer):
         self.w -= learn_rate * self.dw 
         self.b -= learn_rate * self.db
     
-    def get_params(self) -> None:
-        return(self.w, self.b)
+    def get_params(self) -> dict:
+        return({"w": self.w, "b": self.b})
 
 class Variational(Layer):
     # i : input dimension index
@@ -154,8 +154,9 @@ class Variational(Layer):
         self.w_std -= learn_rate * self.dw_std
         self.b_std -= learn_rate * self.db_std
 
-    def get_params(self) -> None:
-        return(self.w_mean, self.b_mean, self.w_std, self.b_std)
+    def get_params(self) -> dict:
+        return({"w_mean": self.w_mean, "b_mean": self.b_mean,
+                "w_std": self.w_std, "b_std": self.b_std})
 
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
@@ -222,6 +223,7 @@ class MLP:
         self.learn_rate = learn_rate
         self.bneck_ind =  bneck_ind
         self.vae = vae
+        self.beta = 1
 
     def __call__(self, x:np.ndarray) -> np.ndarray:
         return(self.forward_pass(x))
@@ -237,10 +239,11 @@ class MLP:
     def loss(self, img:np.ndarray, recon: np.ndarray) -> float:
         # img: input data
         # recon: reconstruction
-        if self.vae == False:
-            return(self.layers[self.bneck_ind].kl))
+        recon_loss = self.loss_fun(img, recon)
+        if not self.vae:
+            return(recon_loss)
         else:
-            return(self.layers[self.bneck_ind].kl + self.layers[self.bneck_ind].kl)
+            return(recon_loss + self.beta * self.layers[self.bneck_ind].kl)
 
     def backprop(self) -> None:
         dz = self.loss_fun.d_loss()
@@ -290,6 +293,30 @@ class MLP:
         
         return(cost_list, recon, bottleneck)
 
+    def save_params(self, filename: str = 'trained_model.npz') -> None:
+        param_dict = {}
+
+        for n, layer in enumerate(self.layers):
+            params = layer.get_params()
+            if params is not None:
+                for name, arr in params.items():
+                    param_dict[f"{name}{n}"] = arr
+
+        np.savez(filename, **param_dict)
+
+    def save_output(self, bottleneck: np.ndarray, recon: np.ndarray,
+                    filename: str = 'bott_output.npz') -> None:
+        out_dict = {"bottleneck": bottleneck, "output": recon}
+
+        if self.vae:
+            var_layer = self.layers[self.bneck_ind]
+            out_dict["mean"] = var_layer.mean
+            out_dict["std"] = var_layer.std
+
+        np.savez(filename, **out_dict)
+
+
+'''
     #def save_params(self, bottleneck, recon, epoch, cost_list):
     def save_params(self):
         w_dict = {}
@@ -308,3 +335,4 @@ class MLP:
 
     def save_output(self, bottleneck, recon):
         np.savez('bott_output.npz', bottleneck=bottleneck, output=recon)
+'''
