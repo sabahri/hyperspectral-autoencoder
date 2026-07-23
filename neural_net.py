@@ -119,13 +119,16 @@ class Variational(Layer):
 
         return(self.latvec)
 
-    def kl_divergence(self, dq:np.ndarray) -> np.ndarray:
+    def kl_divergence(self) -> None:
+        # KL loss term
         self.kl = 0.5 * np.mean(np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
-
-        grad_kl_mean = dq + self.mean
-        grad_kl_std = dq * self.eps_bott + 0.5*(np.exp(self.log_var) - 1)
+        # Gradients
+        self.d_kl_mean = self.mean
+        self.d_kl_std = (self.std**2 - 2) / self.std
+        
 
     def backprop(self, dq: np.ndarray):
+        # Reconstruction loss component
         self.dw_mean = self.x.T @ dq / len(self.x)
         self.db_mean = np.sum(dq, axis=0, keepdims=True) / len(self.x)
 
@@ -134,22 +137,25 @@ class Variational(Layer):
         self.dw_std = self.x.T @ dL_ds / len(self.x)
         self.db_std = np.sum(dL_ds, axis=0, keepdims=True) / len(self.x)
 
+        # Contribution from KL divergence terms
+        self.kl_divergence()
+        d_mean = self.d_kl_mean + dq
+        ds = dL_ds + self.d_kl_std * (self.A - 1)/self.A
+
         # Mean part and Standard Dev part jointly contributing to the gradient
-        dz = (dq @ self.w_mean.T) + (dL_ds @ self.w_std.T)
+        dz = (d_mean @ self.w_mean.T) + (ds @ self.w_std.T)
 
         return(dz)
 
     def update_params(self):
-        self.w_mean = learn_rate * self.dw_mean 
-        self.b_mean = learn_rate * self.db_mean
+        self.w_mean -= learn_rate * self.dw_mean 
+        self.b_mean -= learn_rate * self.db_mean
 
-        self.w_std = learn_rate * self.dw_std
-        self.b_std = learn_rate * self.db_std
+        self.w_std -= learn_rate * self.dw_std
+        self.b_std -= learn_rate * self.db_std
 
     def get_params(self) -> None:
         return(self.w_mean, self.b_mean, self.w_std, self.b_std)
-
-
 
 class ReLU(Layer):
     def forward_pass(self, x:np.ndarray) -> np.ndarray:
@@ -209,12 +215,13 @@ class MSE(Loss):
 class MLP:
     # layers:list[Layer] # not inheriting from Layer; holding a compositional list of Layer objects
     # loss_fun: Loss # hold one loss-type object, no specificity
-    def __init__(self, layers:list[Layer], bneck_ind:int, loss_fun: Loss, learn_rate: float) -> None:
+    def __init__(self, layers:list[Layer], bneck_ind:int, loss_fun: Loss, vae:bool, learn_rate: float) -> None:
         self.layers = layers
         self.arch_len = len(layers)
         self.loss_fun = loss_fun
         self.learn_rate = learn_rate
-        self. bneck_ind =  bneck_ind
+        self.bneck_ind =  bneck_ind
+        self.vae = vae
 
     def __call__(self, x:np.ndarray) -> np.ndarray:
         return(self.forward_pass(x))
@@ -230,8 +237,11 @@ class MLP:
     def loss(self, img:np.ndarray, recon: np.ndarray) -> float:
         # img: input data
         # recon: reconstruction
-        return(self.loss_fun(img, recon))
-    
+        if self.vae == False:
+            return(self.layers[self.bneck_ind].kl))
+        else:
+            return(self.layers[self.bneck_ind].kl + self.layers[self.bneck_ind].kl)
+
     def backprop(self) -> None:
         dz = self.loss_fun.d_loss()
         for layer in reversed(self.layers):
