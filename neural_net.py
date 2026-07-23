@@ -138,7 +138,7 @@ class Variational(Layer):
         self.db_std = np.sum(dL_ds, axis=0, keepdims=True) / len(self.x)
 
         # Contribution from KL divergence terms
-        self.kl_divergence()
+        # self.kl_divergence()
         d_mean = self.d_kl_mean + dq
         ds = dL_ds + self.d_kl_std * (self.A - 1)/self.A
 
@@ -240,10 +240,13 @@ class MLP:
         # img: input data
         # recon: reconstruction
         recon_loss = self.loss_fun(img, recon)
+
         if not self.vae:
             return(recon_loss)
         else:
-            return(recon_loss + self.beta * self.layers[self.bneck_ind].kl)
+            var_layer = self.layers[self.bneck_ind]
+            var_layer.kl_divergence()
+            return(recon_loss + self.beta * var_layer.kl)
 
     def backprop(self) -> None:
         dz = self.loss_fun.d_loss()
