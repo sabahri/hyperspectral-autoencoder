@@ -125,10 +125,10 @@ class Variational(Layer):
         # KL loss term
         self.kl = 0.5 * np.mean(np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
          # Gradients
-        self.d_kl_mean = self.mean
-        self.d_kl_std = (self.std**2 - 1) / self.std
+        self.d_kl_mean = self.mean / self.mean.shape[0]
+        self.d_kl_std = (self.std**2 - 1) / (self.std * self.mean.shape[0])
 
-        #print("kl:", self.kl, "mean^2 max:", np.abs(self.mean**2).max(), "d_kl_std max:", np.abs(self.d_kl_std).max())
+        print("kl:", self.kl, "mean^2 max:", np.abs(self.mean**2).max(), "d_kl_std max:", np.abs(self.d_kl_std).max())
        
     def _sigmoid(self):
         self.sig = np.exp(-np.logaddexp(0,-self.s))
