@@ -101,10 +101,11 @@ bott_dim = int(kl.knee)
 
 
 ##### Optimizing learning rate
-num_epochs = 500
+num_epochs = 3
 epochs = np.linspace(1,num_epochs,num_epochs)
 
 lr = np.array((1., 1.2, 1.4, 1.6, 1.8, 2.))
+#lr = np.array((1.0,1.2))
 num_rates = lr.shape[0]
 costs = np.zeros((num_rates, num_epochs))
 

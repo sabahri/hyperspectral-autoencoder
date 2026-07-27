@@ -104,6 +104,9 @@ class Variational(Layer):
         self.std = np.logaddexp(0,self.s) + 1e-6
         self.log_var = 2 * np.log(self.std)
 
+        #print("mean max:", np.abs(self.mean).max())
+        #print("std max:", np.abs(self.std).max())
+
         # Generate epsilon for bottleneck and return sampled latent vector
         self.out = self.reparametrization()
 
@@ -121,12 +124,15 @@ class Variational(Layer):
     def kl_divergence(self) -> None:
         # KL loss term
         self.kl = 0.5 * np.mean(np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
-        # Gradients
+         # Gradients
         self.d_kl_mean = self.mean
-        self.d_kl_std = (self.std**2 - 2) / self.std
+        self.d_kl_std = (self.std**2 - 1) / self.std
 
+        #print("kl:", self.kl, "mean^2 max:", np.abs(self.mean**2).max(), "d_kl_std max:", np.abs(self.d_kl_std).max())
+       
     def _sigmoid(self):
-        self.sig = np.where(self.s >=0, 1/(1+np.exp(-self.s)), np.exp(self.s)/(1+np.exp(self.s)))
+        self.sig = np.exp(-np.logaddexp(0,-self.s))
+        #self.sig = np.where(self.s >=0, 1/(1+np.exp(-self.s)), np.exp(self.s)/(1+np.exp(self.s)))
         return(self.sig)
 
     def backprop(self, dq: np.ndarray):
@@ -268,6 +274,7 @@ class MLP:
             recon, bottleneck = self.forward_pass(img)
             cost = self.loss(img, recon)
             cost_list.append(cost)
+            print(j,cost)
 
             self.backprop()
             self.update_params()
