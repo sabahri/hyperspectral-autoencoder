@@ -101,7 +101,7 @@ class Variational(Layer):
         #self.A = 1 + np.exp(self.s)
 
         #self.std = np.log(self.A) + 1e-6
-        self.std = np.logaddexp(0,self.s) + 1e-6
+        self.std = np.logaddexp(0,self.s) + 0.01 #1e-6
         self.log_var = 2 * np.log(self.std)
 
         #print("mean max:", np.abs(self.mean).max())
