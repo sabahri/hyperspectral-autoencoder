@@ -137,19 +137,22 @@ class Variational(Layer):
 
     def backprop(self, dq: np.ndarray):
         self._sigmoid()
-        # Reconstruction loss component
-        self.dw_mean = self.x.T @ dq / len(self.x)
-        self.db_mean = np.sum(dq, axis=0, keepdims=True) / len(self.x)
-
-        # From before: self.A = 1 + np.exp(self.x @ self.w_std + self.b_std)
-        dL_ds = dq * self.eps_bott * self.sig    
-        self.dw_std = self.x.T @ dL_ds / len(self.x)
-        self.db_std = np.sum(dL_ds, axis=0, keepdims=True) / len(self.x)
+        dL_ds = dq * self.eps_bott * self.sig  
 
         # Contribution from KL divergence terms
-        # self.kl_divergence()
         d_mean = self.d_kl_mean + dq
         ds = dL_ds + self.d_kl_std * self.sig
+
+        # Reconstruction loss component
+        #self.dw_mean = self.x.T @ dq / len(self.x)
+        self.dw_mean = self.x.T @ d_mean / len(self.x)
+        #self.db_mean = np.sum(dq, axis=0, keepdims=True) / len(self.x)
+        self.db_mean = np.sum(d_mean, axis=0, keepdims=True) / len(self.x)
+          
+        #self.dw_std = self.x.T @ dL_ds / len(self.x)
+        self.dw_std = self.x.T @ ds / len(self.x)
+        #self.db_std = np.sum(dL_ds, axis=0, keepdims=True) / len(self.x)
+        self.db_std = np.sum(ds, axis=0, keepdims=True) / len(self.x)
 
         # Mean part and Standard Dev part jointly contributing to the gradient
         dz = (d_mean @ self.w_mean.T) + (ds @ self.w_std.T)
