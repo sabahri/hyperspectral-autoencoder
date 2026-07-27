@@ -124,7 +124,7 @@ for i in range(num_rates):
 	bott_i = 4
 	num_layers = (len(layers) + 1) / 2
 	loss_function = nn.MSE()
-	n_network = nn.MLP(layers, bott_i, loss_function, vae=True, lr[i])
+	n_network = nn.MLP(layers, bott_i, loss_function, True, lr[i])
 	costs[i,:] = n_network.opt_lr(data_z_reshaped, num_epochs)
 	ax.plot(epochs, costs[i,:], label=f"lr: {lr[i]:.2f}")
 

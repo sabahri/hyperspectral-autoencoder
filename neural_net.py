@@ -6,8 +6,6 @@
 
 
 import numpy as np
-import jax.numpy as jnp 
-from jax import grad
 # Defining Layers and Activation Functions
 
 class Layer:
@@ -100,9 +98,10 @@ class Variational(Layer):
         self.mean = self.x @ self.w_mean + self.b_mean
 
         self.s = self.x @ self.w_std + self.b_std
-        self.A = 1 + np.exp(self.s)
+        #self.A = 1 + np.exp(self.s)
 
-        self.std = np.log(self.A) + 1e-6
+        #self.std = np.log(self.A) + 1e-6
+        self.std = np.logaddexp(0,self.s) + 1e-6
         self.log_var = 2 * np.log(self.std)
 
         # Generate epsilon for bottleneck and return sampled latent vector
@@ -125,29 +124,33 @@ class Variational(Layer):
         # Gradients
         self.d_kl_mean = self.mean
         self.d_kl_std = (self.std**2 - 2) / self.std
-        
+
+    def _sigmoid(self):
+        self.sig = np.where(self.s >=0, 1/(1+np.exp(-self.s)), np.exp(self.s)/(1+np.exp(self.s)))
+        return(self.sig)
 
     def backprop(self, dq: np.ndarray):
+        self._sigmoid()
         # Reconstruction loss component
         self.dw_mean = self.x.T @ dq / len(self.x)
         self.db_mean = np.sum(dq, axis=0, keepdims=True) / len(self.x)
 
         # From before: self.A = 1 + np.exp(self.x @ self.w_std + self.b_std)
-        dL_ds = dq * self.eps_bott * (self.A - 1) / self.A        
+        dL_ds = dq * self.eps_bott * self.sig    
         self.dw_std = self.x.T @ dL_ds / len(self.x)
         self.db_std = np.sum(dL_ds, axis=0, keepdims=True) / len(self.x)
 
         # Contribution from KL divergence terms
         # self.kl_divergence()
         d_mean = self.d_kl_mean + dq
-        ds = dL_ds + self.d_kl_std * (self.A - 1)/self.A
+        ds = dL_ds + self.d_kl_std * self.sig
 
         # Mean part and Standard Dev part jointly contributing to the gradient
         dz = (d_mean @ self.w_mean.T) + (ds @ self.w_std.T)
 
         return(dz)
 
-    def update_params(self):
+    def update_params(self, learn_rate: float) -> None:
         self.w_mean -= learn_rate * self.dw_mean 
         self.b_mean -= learn_rate * self.db_mean
 
