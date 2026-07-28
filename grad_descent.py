@@ -7,6 +7,7 @@ import numpy as np
 import sys
 
 import neural_net as nn
+np.seterr(all='raise')
 
 ##### Data import and z-normalization
 
@@ -101,37 +102,64 @@ bott_dim = int(kl.knee)
 
 
 ##### Optimizing learning rate
-num_epochs = 3
+num_epochs = 1500
 epochs = np.linspace(1,num_epochs,num_epochs)
 
-lr = np.array((1., 1.2, 1.4, 1.6, 1.8, 2.))
-#lr = np.array((1.0,1.2))
-num_rates = lr.shape[0]
-costs = np.zeros((num_rates, num_epochs))
+#lr = np.array((0.0001, 0.001, 0.01, 0.1, 1.))
+#lr = np.array((0.01,0.1,1.))
+#lr = np.array((0.002, 0.004, 0.006, 0.008, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1))
+lr = 0.04
+#num_rates = lr.shape[0]
+costs = np.zeros((num_epochs))
+recon_costs = np.zeros_like(costs)
+kl_costs = np.zeros_like(costs)
 
-colors = cm.rainbow(np.linspace(0,1,num_rates))
-fig, ax = plt.subplots()
+#colors = cm.rainbow(np.linspace(0,1,num_rates))
+colors = cm.rainbow(np.linspace(0,1,3))
+fig, axs = plt.subplots()
 
-for i in range(num_rates):
-	np.random.seed(42)
-	# Desired neural network architecture, bottleneck is after Tanh
-	layers = [nn.Linear(num_bands, 64), nn.ReLU(), 
-			nn.Linear(64, 16), nn.ReLU(), 
-#			nn.Linear(16, bott_dim), nn.Tanh(), 
-			nn.Variational(16, bott_dim),
-			nn.Linear(bott_dim, 16), nn.ReLU(), 
-			nn.Linear(16,64), nn.ReLU(), 
-			nn.Linear(64, num_bands)]
-	bott_i = 4
-	num_layers = (len(layers) + 1) / 2
-	loss_function = nn.MSE()
-	n_network = nn.MLP(layers, bott_i, loss_function, True, lr[i])
-	costs[i,:] = n_network.opt_lr(data_z_reshaped, num_epochs)
-	ax.plot(epochs, costs[i,:], label=f"lr: {lr[i]:.2f}")
+np.random.seed(42)
+# Desired neural network architecture, bottleneck is after Tanh
+layers = [nn.Linear(num_bands, 64), nn.ReLU(), 
+		nn.Linear(64, 16), nn.ReLU(), 
+#		nn.Linear(16, bott_dim), nn.Tanh(), 
+		nn.Variational(16, bott_dim),
+		nn.Linear(bott_dim, 16), nn.ReLU(), 
+		nn.Linear(16,64), nn.ReLU(), 
+		nn.Linear(64, num_bands)]
+bott_i = 4
+num_layers = (len(layers) + 1) / 2
+loss_function = nn.MSE()
+n_network = nn.MLP(layers, bott_i, loss_function, True, lr)
+costs, recon_costs, kl_costs = n_network.opt_lr(data_z_reshaped, num_epochs)
+axs.plot(epochs, costs, label="Total Cost")
+axs.plot(epochs, recon_costs, label="Reconstruction Cost")
+axs.plot(epochs, kl_costs, label="KL Cost")
 
-ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
-ax.grid()
-ax.legend()
+# for i in range(num_rates):
+# 	np.random.seed(42)
+# 	# Desired neural network architecture, bottleneck is after Tanh
+# 	layers = [nn.Linear(num_bands, 64), nn.ReLU(), 
+# 			nn.Linear(64, 16), nn.ReLU(), 
+# #			nn.Linear(16, bott_dim), nn.Tanh(), 
+# 			nn.Variational(16, bott_dim),
+# 			nn.Linear(bott_dim, 16), nn.ReLU(), 
+# 			nn.Linear(16,64), nn.ReLU(), 
+# 			nn.Linear(64, num_bands)]
+# 	bott_i = 4
+# 	num_layers = (len(layers) + 1) / 2
+# 	loss_function = nn.MSE()
+# 	n_network = nn.MLP(layers, bott_i, loss_function, True, lr[i])
+# 	costs[i,:], recon_costs[i,:], kl_costs[i,:] = n_network.opt_lr(data_z_reshaped, num_epochs)
+# 	axs[0,0].plot(epochs, costs[i,:], label=f"lr: {lr[i]:.2f}")
+# 	axs[0,1].plot(epochs, recon_costs[i,:], label=f"lr: {lr[i]:.2f}")
+# 	axs[0,2].plot(epochs, kl_costs[i,:], label=f"lr: {lr[i]:.2f}")
+
+#axs.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
+#axs.grid()
+axs.set_xlabel("Number of Epochs")
+axs.set_ylabel("Cost")
+axs.legend()
 plt.show()
 
 

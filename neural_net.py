@@ -128,7 +128,7 @@ class Variational(Layer):
         self.d_kl_mean = self.mean / self.mean.shape[0]
         self.d_kl_std = (self.std**2 - 1) / (self.std * self.mean.shape[0])
 
-        print("kl:", self.kl, "mean^2 max:", np.abs(self.mean**2).max(), "d_kl_std max:", np.abs(self.d_kl_std).max())
+        #print("kl:", self.kl, "mean^2 max:", np.abs(self.mean**2).max(), "d_kl_std max:", np.abs(self.d_kl_std).max())
        
     def _sigmoid(self):
         self.sig = np.exp(-np.logaddexp(0,-self.s))
@@ -258,7 +258,8 @@ class MLP:
         else:
             var_layer = self.layers[self.bneck_ind]
             var_layer.kl_divergence()
-            return(recon_loss + self.beta * var_layer.kl)
+            total = recon_loss + self.beta * var_layer.kl
+            return(total, recon_loss, var_layer.kl)
 
     def backprop(self) -> None:
         dz = self.loss_fun.d_loss()
@@ -271,22 +272,26 @@ class MLP:
     
     def opt_lr(self, img: np.ndarray, epochs:int) -> np.ndarray:
         cost_list = []
+        recon_cost_list = []
+        kl_cost_list = []
 
         for j in range(epochs):
 
             recon, bottleneck = self.forward_pass(img)
-            cost = self.loss(img, recon)
+            cost, recon_cost, kl_cost = self.loss(img, recon)
+
+            if np.isnan(cost) or np.isinf(cost):
+                print(f"Diverged at epoch {j}: cost = {cost}")
+                break
+
             cost_list.append(cost)
-            print(j,cost)
+            recon_cost_list.append(recon_cost)
+            kl_cost_list.append(kl_cost)
 
             self.backprop()
             self.update_params()
-            # print("Learning rate:", self.learn_rate)
-            # print("Epoch:", j)
-            # print("Cost:", cost)
         
-       #print(len(cost_list))
-        return(np.asarray(cost_list))
+        return(np.asarray(cost_list), np.asarray(recon_cost_list), np.asarray(kl_cost_list))
 
     def train(self, img: np.ndarray, cost_min: float) -> np.ndarray:
         # img: input data
