@@ -1,16 +1,19 @@
 Creating an autoencoder from scratch for hyperspectral remote sensing
+The main purpose is to learn how basic NNs are built (without using pytorch or tensorflow), and expose myself to Variational methods. Autoencoders are self-contained, so it is a way for me to break down a dataset to a latent space and find way to optimize that latent space by assessing the reconstruction.
+Also a way to introduce myself to a simple satellite dataset.
 
 # Table of Contents
 1. [Project Overview](#1-project-overview)
 2. [Architecture](#2-architecture)
 3. [Script Summary](#3-script-summary)
+4. [AI Usage Disclaimer](#4-AI-usage-disclaimer)
 4. [Future Work](#4-future-work)
 
 # 1. Project Overview
-This is a basic autoencoder with 5 hidden layers to analyze the SalinasA dataset. It comprises 83 x 86 pixel "images" aquired across 204 bands within the visible / IR range, downloaded here:
+This is a basic autoencoder to analyze the SalinasA dataset. It comprises 83 x 86 pixel "images" aquired across 204 bands within the visible / IR range, downloaded from here:
 https://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes
 
-My aim was to build a self-supervised autoencoder for remote sensing, and to explore the variables that are important in general to decoding hyperspectral data in Earth Observation / Remote Sensing.
+My aim was to build a self-supervised autoencoder for remote sensing, and to explore the variables that are important in general to decoding hyperspectral data in Earth Observation / Remote Sensing. Note: this is not a very practical approach, but was used as an exercise.
 
 # 2. Architecture
 The autoencoder breaks down the z-normalized input data from 204 to 10 dimensions (input -> decoder -> bottleneck) and then assesses the quality of the learned bottleneck layer by reconstructing the original data (bottleneck -> encoder -> output). Each hidden layer was ReLU-activated except for the bottleneck, which was tanh-activated. The weights and biases were optimized via batch gradient descent, minimizing the cost based on mean-squared error between the input and output layers.
@@ -44,6 +47,10 @@ This bottleneck analysis shows that even though the per-pixel-loss condition sho
 <img width="640" height="480" alt="Figure1" src="https://github.com/sabahri/hyperspectral-autoencoder/blob/main/images/histograms.png">
 
 So, as it stands, it is unlikely that this neural network architecture will generalize well to other datasets. For the next step, I will instead make the autoencoder variational to push the network into using the latent space in a more structured way. This leads me to my "Future" (now) work of turning this into a Variational autoencoder.
+
+# 4. AI Usage Disclaimer
+
+Claude was used for discussion and learning. After all the basic programming was done, I used Claude code to edit the *_patience.py files as a way to also learn how to use Claude code.
 
 # 4. The Next Step
 
