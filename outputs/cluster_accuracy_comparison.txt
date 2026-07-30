@@ -1,0 +1,6 @@
+Representation                         KMC acc    GMM acc
+Vanilla AE (tanh bottleneck)            0.5464     0.5714
+VAE mean (beta=1)                       0.4098     0.3686
+VAE sampled bottleneck (beta=1)         0.1964     0.2836
+PCA (no autoencoder)                    0.5644     0.4759
+Majority-class baseline                 0.2508
