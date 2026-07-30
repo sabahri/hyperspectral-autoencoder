@@ -1,0 +1,107 @@
+import scipy.io
+from scipy.io import loadmat
+import kneed as kn
+import matplotlib.pyplot as plt
+import numpy as np
+
+import neural_net_masked as nn
+
+##### Data import and z-normalization
+
+data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
+ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
+
+# SalinasA: 83 x 86 spatial grid
+# 204 channels
+num_pixels = data.shape[0] * data.shape[1]
+num_bands = data.shape[-1]
+
+# 7138 1x204-dim vectors
+data_reshaped = data.reshape(num_pixels, num_bands)
+
+# Pixels (row=12, col=13) and (row=12, col=14) show ~19-sigma within-class spikes
+# isolated to mutually exclusive band groups (edge bands / water-absorption bands
+# respectively), consistent with a sensor glitch rather than real reflectance.
+# Excluded from band statistics and zeroed post-normalization so they don't
+# distort global mean/std or inject anomalous gradients, while preserving the
+# 83x86 grid shape for downstream reshaping.
+bad_pixel_mask = np.zeros((data.shape[0], data.shape[1]), dtype=bool)
+bad_pixel_mask[12, 13] = True
+bad_pixel_mask[12, 14] = True
+good_pixel_mask = ~bad_pixel_mask
+
+# z-scoring
+# Normalize input so that the pixels of each band are centered on 0, with stdev = 1
+# --> A useless network will produce MSE loss ~ 1
+data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
+epsilon = 10**-6
+
+for j in range(data.shape[-1]):
+	mean = np.mean(data[:,:,j][good_pixel_mask])
+	std = np.std(data[:,:,j][good_pixel_mask])
+	data_z[:,:,j] = (data[:,:,j] - mean) / (std + epsilon)		# add infinitesimal epsilon in case std = 0
+
+data_z[bad_pixel_mask, :] = 0
+
+data_z_reshaped = data_z.reshape(num_pixels, num_bands)
+
+##### PCA and Kneedle analysis for bottleneck vector optimization:
+##### Detect intrinsic dimensionality of data's linear structure
+# Correlation matrix
+corr = data_z_reshaped.T @ data_z_reshaped / num_pixels
+eig_val, eig_vec = np.linalg.eigh(corr)
+
+# Cumulative explained variance ratio
+cumul = np.cumsum(eig_val[::-1]) / np.sum(eig_val)
+pca_num = np.linspace(1, num_bands, num_bands)
+
+# Kneedle algorithm to find curve elbow
+kl = kn.KneeLocator(pca_num, cumul, curve="concave", direction="increasing")
+kl.plot_knee()
+if __name__ == "__main__":
+	plt.axvline(x = kl.knee,  color='red', linestyle='--',
+		label=f'Knee: {kl.knee:.2f} \n Explained Var:{100*cumul[int(kl.knee)]:.2f}%')
+	plt.xlabel('Principal Component Axis Number')
+	plt.ylabel('Cumulative Explained Variance Ratio')
+	plt.legend()
+	plt.show(block=False)
+	plt.pause(0.1)
+
+bott_dim = int(kl.knee)
+
+##### Gradient Descent (vanilla, non-variational autoencoder)
+
+# Learning Rate = 1.2
+lr = 1.2
+# Bottleneck index
+bott_i = 5
+cost_minimum = 0.3
+
+np.random.seed(42)
+# Desired neural network architecture, bottleneck is after Tanh
+layers = [nn.Linear(num_bands, 64), nn.ReLU(),
+		nn.Linear(64, 16), nn.ReLU(),
+		nn.Linear(16, bott_dim), nn.Tanh(),
+		nn.Linear(bott_dim, 16), nn.ReLU(),
+		nn.Linear(16,64), nn.ReLU(),
+		nn.Linear(64, num_bands)]
+num_layers = (len(layers) + 1) / 2
+loss_function = nn.MSE()
+n_network = nn.MLP(layers, bott_i, loss_function, False, lr)
+costs, output, b_neck = n_network.train(data_z_reshaped, cost_minimum)
+
+# Saving values from trained model
+n_network.save_params('trained_model_masked.npz')
+n_network.save_output(b_neck, output, 'bott_output_masked.npz')
+
+##### GD Postmortem
+epoch = len(costs)
+epochs = np.linspace(1, epoch, epoch)
+
+fig, ax = plt.subplots()
+
+ax.plot(epochs, np.asarray(costs))
+ax.set(xlabel='epoch', ylabel='Cost (MSE Loss)')
+ax.grid()
+plt.savefig("images/grad_descent_cost_curve_masked.png")
+plt.show()
