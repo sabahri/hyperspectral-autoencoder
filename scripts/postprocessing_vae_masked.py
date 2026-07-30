@@ -39,6 +39,17 @@ num_bands = data.shape[-1]
 # 7138 1x204-dim vectors
 data_reshaped = data.reshape(num_pixels, num_bands)
 
+# Pixels (row=12, col=13) and (row=12, col=14) show ~19-sigma within-class spikes
+# isolated to mutually exclusive band groups (edge bands / water-absorption bands
+# respectively), consistent with a sensor glitch rather than real reflectance.
+# Excluded from band statistics and zeroed post-normalization so they don't
+# distort global mean/std or inject anomalous gradients, while preserving the
+# 83x86 grid shape for downstream reshaping.
+bad_pixel_mask = np.zeros((data.shape[0], data.shape[1]), dtype=bool)
+bad_pixel_mask[12, 13] = True
+bad_pixel_mask[12, 14] = True
+good_pixel_mask = ~bad_pixel_mask
+
 # z-scoring
 # Normalize input so that the pixels of each band are centered on 0, with stdev = 1
 # --> A useless network will produce MSE loss ~ 1
@@ -46,9 +57,11 @@ data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
 epsilon = 10**-6
 
 for j in range(data.shape[-1]):
-	mean = np.mean(data[:,:,j])
-	std = np.std(data[:,:,j])
+	mean = np.mean(data[:,:,j][good_pixel_mask])
+	std = np.std(data[:,:,j][good_pixel_mask])
 	data_z[:,:,j] = (data[:,:,j] - mean) / (std + epsilon)		# add infinitesimal epsilon in case std = 0
+
+data_z[bad_pixel_mask, :] = 0
 
 data_z_reshaped = data_z.reshape(num_pixels, num_bands)
 
@@ -76,7 +89,8 @@ handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[i]
 
 plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
-plt.title('UMAP embedding of Bottleneck features')
+plt.title('UMAP embedding of Bottleneck features (Beta-VAE, beta=0.1)')
+plt.savefig('images/umap_bottleneck_beta0.1_masked.png')
 
 #############################################
 ############# GMM on Bottleneck #############
@@ -308,6 +322,7 @@ im = ax_loss.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
 ax_loss.set_title('Per-Pixel Loss')
 fig_loss.colorbar(im, ax=ax_loss, label='Per-Pixel Loss', fraction=0.03, pad=0.04)
 plt.tight_layout()
+plt.savefig('images/perpixel_loss_beta0.1_masked.png')
 
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18,6))
 
@@ -323,7 +338,7 @@ ax3.set_title('Ground Truth')
 
 plt.subplots_adjust(bottom=0.15)
 fig.legend(handles=handles, loc='lower center', ncol=4, bbox_to_anchor=(0.5, 0.01))
-plt.tight_layout
+plt.savefig('images/kmc_gmm_ground_truth_beta0.1_masked.png')
 
 ####################################################
 ############# More Bottleneck Analysis #############
