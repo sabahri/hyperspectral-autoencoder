@@ -17,19 +17,19 @@ import umap
 plt.rcParams.update({'font.size': 14})
 
 ##### Loading data
-data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
-ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
+data = loadmat('data/SalinasA_corrected.mat')['salinasA_corrected']
+ground_truth = loadmat('data/SalinasA_gt.mat')['salinasA_gt']
 ground_truth_flat = ground_truth.reshape(ground_truth.shape[0]*ground_truth.shape[1],)
 unique_labels = np.unique(ground_truth_flat)
 gt_classnum = len(unique_labels)
 
 recoded = np.searchsorted(unique_labels,ground_truth_flat)
 
-checkpoint1 = np.load('trained_model.npz')
+checkpoint1 = np.load('outputs/trained_model.npz')
 w_list = [checkpoint1[f'w{i}'] for i in range(6)]
 b_list = [checkpoint1[f'b{i}'] for i in range(6)]
 
-checkpoint2 = np.load('bott_output.npz')
+checkpoint2 = np.load('outputs/bott_output.npz')
 bottleneck = checkpoint2['bottleneck']
 output = checkpoint2['output']
 

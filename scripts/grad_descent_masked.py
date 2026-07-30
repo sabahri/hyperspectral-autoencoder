@@ -8,8 +8,8 @@ import neural_net_masked as nn
 
 ##### Data import and z-normalization
 
-data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
-ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
+data = loadmat('data/SalinasA_corrected.mat')['salinasA_corrected']
+ground_truth = loadmat('data/SalinasA_gt.mat')['salinasA_gt']
 
 # SalinasA: 83 x 86 spatial grid
 # 204 channels
@@ -91,8 +91,8 @@ n_network = nn.MLP(layers, bott_i, loss_function, False, lr)
 costs, output, b_neck = n_network.train(data_z_reshaped, cost_minimum)
 
 # Saving values from trained model
-n_network.save_params('trained_model_masked.npz')
-n_network.save_output(b_neck, output, 'bott_output_masked.npz')
+n_network.save_params('outputs/trained_model_masked.npz')
+n_network.save_output(b_neck, output, 'outputs/bott_output_masked.npz')
 
 ##### GD Postmortem
 epoch = len(costs)

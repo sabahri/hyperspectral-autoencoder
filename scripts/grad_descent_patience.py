@@ -6,13 +6,13 @@ import matplotlib.cm as cm
 import numpy as np
 import sys
 
-import neural_net_patience_masked as nn
+import neural_net_patience as nn
 np.seterr(all='raise')
 
 ##### Data import and z-normalization
 
-data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
-ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
+data = loadmat('data/SalinasA_corrected.mat')['salinasA_corrected']
+ground_truth = loadmat('data/SalinasA_gt.mat')['salinasA_gt']
 
 # SalinasA: 83 x 86 spatial grid
 # 204 channels
@@ -22,17 +22,6 @@ num_bands = data.shape[-1]
 # 7138 1x204-dim vectors
 data_reshaped = data.reshape(num_pixels, num_bands)
 
-# Pixels (row=12, col=13) and (row=12, col=14) show ~19-sigma within-class spikes
-# isolated to mutually exclusive band groups (edge bands / water-absorption bands
-# respectively), consistent with a sensor glitch rather than real reflectance.
-# Excluded from band statistics and zeroed post-normalization so they don't
-# distort global mean/std or inject anomalous gradients, while preserving the
-# 83x86 grid shape for downstream reshaping.
-bad_pixel_mask = np.zeros((data.shape[0], data.shape[1]), dtype=bool)
-bad_pixel_mask[12, 13] = True
-bad_pixel_mask[12, 14] = True
-good_pixel_mask = ~bad_pixel_mask
-
 # z-scoring
 # Normalize input so that the pixels of each band are centered on 0, with stdev = 1
 # --> A useless network will produce MSE loss ~ 1
@@ -40,11 +29,9 @@ data_z = np.zeros((data.shape[0], data.shape[1], data.shape[2]))
 epsilon = 10**-6
 
 for j in range(data.shape[-1]):
-	mean = np.mean(data[:,:,j][good_pixel_mask])
-	std = np.std(data[:,:,j][good_pixel_mask])
+	mean = np.mean(data[:,:,j])
+	std = np.std(data[:,:,j])
 	data_z[:,:,j] = (data[:,:,j] - mean) / (std + epsilon)		# add infinitesimal epsilon in case std = 0
-
-data_z[bad_pixel_mask, :] = 0
 
 data_z_reshaped = data_z.reshape(num_pixels, num_bands)
 
@@ -139,8 +126,8 @@ for ax, beta in zip(axs, betas):
 	n_network = nn.MLP(layers, bott_i, loss_function, True, lr, beta)
 	costs, recon_costs, kl_costs = n_network.train_patience(
 		data_z_reshaped, max_epochs, patience,
-		param_filename=f'trained_model_beta{beta}_masked.npz',
-		output_filename=f'bott_output_beta{beta}_masked.npz')
+		param_filename=f'outputs/trained_model_beta{beta}.npz',
+		output_filename=f'outputs/bott_output_beta{beta}.npz')
 
 	epoch = len(costs)
 	epochs = np.linspace(1, epoch, epoch)
@@ -162,7 +149,7 @@ for ax, beta in zip(axs, betas):
 	ax.legend()
 
 plt.tight_layout()
-plt.savefig("images/patience_cost_curve_masked.png")
+plt.savefig("images/patience_cost_curve.png")
 plt.show()
 
 

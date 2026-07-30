@@ -314,7 +314,7 @@ class MLP:
         
         return(cost_list, recon, bottleneck)
 
-    def save_params(self, filename: str = 'trained_model.npz') -> None:
+    def save_params(self, filename: str = 'outputs/trained_model.npz') -> None:
         param_dict = {}
 
         for n, layer in enumerate(self.layers):
@@ -326,7 +326,7 @@ class MLP:
         np.savez(filename, **param_dict)
 
     def save_output(self, bottleneck: np.ndarray, recon: np.ndarray,
-                    filename: str = 'bott_output.npz') -> None:
+                    filename: str = 'outputs/bott_output.npz') -> None:
         out_dict = {"bottleneck": bottleneck, "output": recon}
 
         if self.vae:

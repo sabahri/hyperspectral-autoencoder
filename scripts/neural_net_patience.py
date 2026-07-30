@@ -101,7 +101,7 @@ class Variational(Layer):
         #self.A = 1 + np.exp(self.s)
 
         #self.std = np.log(self.A) + 1e-6
-        self.std = np.logaddexp(0,self.s) + 0.01 #1e-6
+        self.std = np.logaddexp(0,self.s) + 1e-6
         self.log_var = 2 * np.log(self.std)
 
         #print("mean max:", np.abs(self.mean).max())
@@ -228,14 +228,14 @@ class MSE(Loss):
 class MLP:
     # layers:list[Layer] # not inheriting from Layer; holding a compositional list of Layer objects
     # loss_fun: Loss # hold one loss-type object, no specificity
-    def __init__(self, layers:list[Layer], bneck_ind:int, loss_fun: Loss, vae:bool, learn_rate: float) -> None:
+    def __init__(self, layers:list[Layer], bneck_ind:int, loss_fun: Loss, vae:bool, learn_rate: float, beta: float = 1) -> None:
         self.layers = layers
         self.arch_len = len(layers)
         self.loss_fun = loss_fun
         self.learn_rate = learn_rate
         self.bneck_ind =  bneck_ind
         self.vae = vae
-        self.beta = 1
+        self.beta = beta
 
     def __call__(self, x:np.ndarray) -> np.ndarray:
         return(self.forward_pass(x))
@@ -314,7 +314,49 @@ class MLP:
         
         return(cost_list, recon, bottleneck)
 
-    def save_params(self, filename: str = 'trained_model.npz') -> None:
+    def train_patience(self, img: np.ndarray, max_epochs: int, patience: int,
+                        param_filename: str = 'outputs/trained_model.npz',
+                        output_filename: str = 'outputs/bott_output.npz') -> np.ndarray:
+        # img: input data
+        # max_epochs: hard cap on training epochs
+        # patience: number of consecutive epochs without a new best cost before stopping early
+        cost_list = []
+        recon_cost_list = []
+        kl_cost_list = []
+
+        best_cost = np.inf
+        epochs_since_best = 0
+
+        for epoch in range(max_epochs):
+            recon, bottleneck = self.forward_pass(img)
+            cost, recon_cost, kl_cost = self.loss(img, recon)
+
+            if np.isnan(cost) or np.isinf(cost):
+                print(f"Diverged at epoch {epoch}: cost = {cost}")
+                break
+
+            cost_list.append(cost)
+            recon_cost_list.append(recon_cost)
+            kl_cost_list.append(kl_cost)
+
+            if cost < best_cost:
+                best_cost = cost
+                epochs_since_best = 0
+                self.save_params(param_filename)
+                self.save_output(bottleneck, recon, output_filename)
+            else:
+                epochs_since_best += 1
+                if epochs_since_best >= patience:
+                    print(f"Stopping at epoch {epoch}: no improvement in {patience} epochs. "
+                          f"Best cost = {best_cost}")
+                    break
+
+            self.backprop()
+            self.update_params()
+
+        return(np.asarray(cost_list), np.asarray(recon_cost_list), np.asarray(kl_cost_list))
+
+    def save_params(self, filename: str = 'outputs/trained_model.npz') -> None:
         param_dict = {}
 
         for n, layer in enumerate(self.layers):
@@ -326,7 +368,7 @@ class MLP:
         np.savez(filename, **param_dict)
 
     def save_output(self, bottleneck: np.ndarray, recon: np.ndarray,
-                    filename: str = 'bott_output.npz') -> None:
+                    filename: str = 'outputs/bott_output.npz') -> None:
         out_dict = {"bottleneck": bottleneck, "output": recon}
 
         if self.vae:

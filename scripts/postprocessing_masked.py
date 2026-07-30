@@ -17,15 +17,19 @@ import umap
 plt.rcParams.update({'font.size': 14})
 
 ##### Loading data
-data = loadmat('SalinasA_corrected.mat')['salinasA_corrected']
-ground_truth = loadmat('SalinasA_gt.mat')['salinasA_gt']
+data = loadmat('data/SalinasA_corrected.mat')['salinasA_corrected']
+ground_truth = loadmat('data/SalinasA_gt.mat')['salinasA_gt']
 ground_truth_flat = ground_truth.reshape(ground_truth.shape[0]*ground_truth.shape[1],)
 unique_labels = np.unique(ground_truth_flat)
 gt_classnum = len(unique_labels)
 
 recoded = np.searchsorted(unique_labels,ground_truth_flat)
 
-checkpoint2 = np.load('bott_output_beta0.1.npz')
+checkpoint1 = np.load('outputs/trained_model_masked.npz')
+w_list = [checkpoint1[f'w{i}'] for i in range(6)]
+b_list = [checkpoint1[f'b{i}'] for i in range(6)]
+
+checkpoint2 = np.load('outputs/bott_output_masked.npz')
 bottleneck = checkpoint2['bottleneck']
 output = checkpoint2['output']
 
@@ -332,15 +336,12 @@ plt.tight_layout
 fig, axes = plt.subplots(2, 5, figsize=(15, 6))
 axes = axes.flatten()
 
-hist_range = (bottleneck.min(), bottleneck.max())
-
 for i in range(d):
-    axes[i].hist(bottleneck[:, i], bins=50, range=hist_range, color='#414fc8')
+    axes[i].hist(bottleneck[:, i], bins=50, range=(-1, 1), color='#414fc8')
     axes[i].set_title(f'Dim {i}')
-    axes[i].set_xlim(hist_range)
+    axes[i].set_xlim(-1, 1)
 
-plt.suptitle('Per-dimension bottleneck activation histograms (Beta-VAE, beta=0.1)')
+plt.suptitle('Per-dimension bottleneck activation histograms')
 plt.tight_layout()
 
-plt.savefig('images/vae_bottleneck_histograms.png')
 plt.show()

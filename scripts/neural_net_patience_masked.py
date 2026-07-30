@@ -121,12 +121,12 @@ class Variational(Layer):
 
         return(self.latvec)
 
-    def kl_divergence(self) -> None:
-        # KL loss term
+    def kl_divergence(self, beta: float = 1) -> None:
+        # KL loss term (raw, unweighted - used for reporting)
         self.kl = 0.5 * np.mean(np.sum(self.mean**2 + np.exp(self.log_var) - self.log_var - 1, axis=-1))
-         # Gradients
-        self.d_kl_mean = self.mean / self.mean.shape[0]
-        self.d_kl_std = (self.std**2 - 1) / (self.std * self.mean.shape[0])
+         # Gradients, scaled by beta to match the weighted loss actually being optimized
+        self.d_kl_mean = beta * self.mean / self.mean.shape[0]
+        self.d_kl_std = beta * (self.std**2 - 1) / (self.std * self.mean.shape[0])
 
         #print("kl:", self.kl, "mean^2 max:", np.abs(self.mean**2).max(), "d_kl_std max:", np.abs(self.d_kl_std).max())
        
@@ -257,7 +257,7 @@ class MLP:
             return(recon_loss)
         else:
             var_layer = self.layers[self.bneck_ind]
-            var_layer.kl_divergence()
+            var_layer.kl_divergence(self.beta)
             total = recon_loss + self.beta * var_layer.kl
             return(total, recon_loss, var_layer.kl)
 
@@ -315,8 +315,8 @@ class MLP:
         return(cost_list, recon, bottleneck)
 
     def train_patience(self, img: np.ndarray, max_epochs: int, patience: int,
-                        param_filename: str = 'trained_model.npz',
-                        output_filename: str = 'bott_output.npz') -> np.ndarray:
+                        param_filename: str = 'outputs/trained_model.npz',
+                        output_filename: str = 'outputs/bott_output.npz') -> np.ndarray:
         # img: input data
         # max_epochs: hard cap on training epochs
         # patience: number of consecutive epochs without a new best cost before stopping early
@@ -356,7 +356,7 @@ class MLP:
 
         return(np.asarray(cost_list), np.asarray(recon_cost_list), np.asarray(kl_cost_list))
 
-    def save_params(self, filename: str = 'trained_model.npz') -> None:
+    def save_params(self, filename: str = 'outputs/trained_model.npz') -> None:
         param_dict = {}
 
         for n, layer in enumerate(self.layers):
@@ -368,7 +368,7 @@ class MLP:
         np.savez(filename, **param_dict)
 
     def save_output(self, bottleneck: np.ndarray, recon: np.ndarray,
-                    filename: str = 'bott_output.npz') -> None:
+                    filename: str = 'outputs/bott_output.npz') -> None:
         out_dict = {"bottleneck": bottleneck, "output": recon}
 
         if self.vae:
