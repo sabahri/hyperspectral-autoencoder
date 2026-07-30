@@ -25,8 +25,11 @@ gt_classnum = len(unique_labels)
 
 recoded = np.searchsorted(unique_labels,ground_truth_flat)
 
-checkpoint2 = np.load('outputs/bott_output_beta0.1_masked.npz')
-bottleneck = checkpoint2['bottleneck']
+checkpoint2 = np.load('outputs/bott_output_beta1_masked.npz')
+# Clustering the deterministic mean vector (not the noise-sampled bottleneck)
+# isolates whether the encoder itself separates classes, independent of the
+# reparameterization-trick sampling noise added on top.
+bottleneck = checkpoint2['mean']
 output = checkpoint2['output']
 
 ##### Repeat normalizing
@@ -89,8 +92,8 @@ handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[i]
 
 plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
-plt.title('UMAP embedding of Bottleneck features (Beta-VAE, beta=0.1)')
-plt.savefig('images/umap_bottleneck_beta0.1_masked.png')
+plt.title('UMAP embedding of Bottleneck features (Beta-VAE, beta=1, mean vectors)')
+plt.savefig('images/umap_bottleneck_beta1_mean_masked.png')
 
 #############################################
 ############# GMM on Bottleneck #############
@@ -322,7 +325,7 @@ im = ax_loss.imshow(p_loss, cmap='plasma', vmin=0, vmax=1)
 ax_loss.set_title('Per-Pixel Loss')
 fig_loss.colorbar(im, ax=ax_loss, label='Per-Pixel Loss', fraction=0.03, pad=0.04)
 plt.tight_layout()
-plt.savefig('images/perpixel_loss_beta0.1_masked.png')
+plt.savefig('images/perpixel_loss_beta1_mean_masked.png')
 
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18,6))
 
@@ -338,7 +341,7 @@ ax3.set_title('Ground Truth')
 
 plt.subplots_adjust(bottom=0.15)
 fig.legend(handles=handles, loc='lower center', ncol=4, bbox_to_anchor=(0.5, 0.01))
-plt.savefig('images/kmc_gmm_ground_truth_beta0.1_masked.png')
+plt.savefig('images/kmc_gmm_ground_truth_beta1_mean_masked.png')
 
 ####################################################
 ############# More Bottleneck Analysis #############
@@ -354,7 +357,7 @@ for i in range(d):
     axes[i].set_title(f'Dim {i}')
     axes[i].set_xlim(hist_range)
 
-plt.suptitle('Per-dimension bottleneck activation histograms (Beta-VAE, beta=0.1)')
+plt.suptitle('Per-dimension bottleneck activation histograms (Beta-VAE, beta=1, mean vectors)')
 plt.tight_layout()
 
 plt.savefig('images/vae_bottleneck_histograms_masked.png')
